@@ -25,7 +25,7 @@ public class FreemarkerUtils {
                 "模板1.txt",
                 MapUtils.of(
                         "user", "张三"
-                ), new OutputStreamWriter(System.out)
+                ), getConsoleWriter()
         );
     }
 
@@ -66,6 +66,14 @@ public class FreemarkerUtils {
             file.mkdirs();
         }
         return new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
+    }
+
+    /**
+     *
+     * @return 控制台打印的writer, 一眼用于测试
+     */
+    public static Writer getConsoleWriter() {
+        return new OutputStreamWriter(System.out);
     }
 
     /**
