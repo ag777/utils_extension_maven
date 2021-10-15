@@ -14,14 +14,17 @@ import java.nio.charset.StandardCharsets;
  * @Date 2021/10/15 11:47
  */
 public class FreemarkerUtils {
-
+    // 默认模板文件编码
     private static final String DEFAULT_ENCODING = StandardCharsets.UTF_8.toString();
 
     public static void main(String[] args) throws IOException, TemplateException {
         process(
-                new File("D:\\temp\\程序测试\\模板引擎\\模板1.txt"),
+//                new File("D:\\temp\\程序测试\\模板引擎\\模板1.txt"),
+                FreemarkerUtils.class,
+                "",
+                "模板1.txt",
                 MapUtils.of(
-                    "user", "张三"
+                        "user", "张三"
                 ), new OutputStreamWriter(System.out)
         );
     }
@@ -35,10 +38,34 @@ public class FreemarkerUtils {
      * @throws TemplateException 转换异常
      */
     public static void process(File templateFile, Object dataModel, File outputFile) throws IOException, TemplateException {
-        if (!outputFile.getParentFile().exists()) {
-            outputFile.mkdirs();
+        process(templateFile, dataModel, getWriter(outputFile));
+    }
+
+    /**
+     *
+     * @param clazz 外部类路径
+     * @param basePackagePath 相对路径,如果就在classPath下，则传空字符串
+     * @param templateName 模板文件名
+     * @param dataModel 数据
+     * @param outputFile 输出文件
+     * @throws IOException io异常
+     * @throws TemplateException 转换异常
+     */
+    public static void process(Class<?> clazz, String basePackagePath, String templateName, Object dataModel, File outputFile) throws IOException, TemplateException {
+        process(clazz, basePackagePath, templateName, dataModel, getWriter(outputFile));
+    }
+
+    /**
+     *
+     * @param file 输出文件
+     * @return 输出文件对应的Writer
+     * @throws FileNotFoundException 文件未找到
+     */
+    public static Writer getWriter(File file) throws FileNotFoundException {
+        if (!file.getParentFile().exists()) {
+            file.mkdirs();
         }
-        process(templateFile, dataModel, new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile))));
+        return new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
     }
 
     /**
@@ -55,6 +82,20 @@ public class FreemarkerUtils {
 
     /**
      *
+     * @param clazz 外部类路径
+     * @param basePackagePath 相对路径,如果就在classPath下，则传空字符串
+     * @param templateName 模板文件名
+     * @param dataModel 数据
+     * @param out 输出流
+     * @throws IOException io异常
+     * @throws TemplateException 转换异常
+     */
+    public static void process(Class<?> clazz, String basePackagePath, String templateName, Object dataModel, Writer out) throws IOException, TemplateException {
+        process(clazz, basePackagePath, templateName, DEFAULT_ENCODING, dataModel, out);
+    }
+
+    /**
+     *
      * @param templateFile 模板文件
      * @param encoding 配置编码
      * @param dataModel 数据
@@ -67,6 +108,24 @@ public class FreemarkerUtils {
         // 设置模板文件路径
         config.setDirectoryForTemplateLoading(templateFile.getParentFile());
         Template template = config.getTemplate(templateFile.getName());
+        template.process(dataModel, out);
+    }
+
+    /**
+     *
+     * @param clazz 外部类路径
+     * @param basePackagePath 相对路径,如果就在classPath下，则传空字符串
+     * @param templateName 模板文件名
+     * @param encoding 模板文件编码
+     * @param dataModel 数据
+     * @param out 输出流
+     * @throws IOException io异常
+     * @throws TemplateException 转换异常
+     */
+    public static void process(Class<?> clazz, String basePackagePath, String templateName, String encoding, Object dataModel, Writer out) throws IOException, TemplateException {
+        Configuration config = getConfiguration(encoding);
+        config.setClassLoaderForTemplateLoading(clazz.getClassLoader(), basePackagePath);
+        Template template = config.getTemplate(templateName);
         template.process(dataModel, out);
     }
 
