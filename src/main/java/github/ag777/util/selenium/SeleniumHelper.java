@@ -22,8 +22,13 @@ public class SeleniumHelper implements AutoCloseable{
         return new SeleniumHelper(driver);
     }
 
-    public WebDriver get() {
+    public WebDriver getDriver() {
         return driver;
+    }
+
+    public SeleniumHelper get(String url) {
+        driver.get(url);
+        return this;
     }
 
     /**
