@@ -2,6 +2,7 @@ package github.ag777.util.selenium;
 
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.util.function.Function;
 
@@ -21,6 +22,13 @@ public class SeleniumHelper implements AutoCloseable{
         WebDriver driver = SeleniumUtils.getChromeDriver(driverPath, null);
         return new SeleniumHelper(driver);
     }
+
+    public static SeleniumHelper chrome(String driverPath, ChromeOptions options) {
+        WebDriver driver = SeleniumUtils.getChromeDriver(driverPath, options,null);
+        return new SeleniumHelper(driver);
+    }
+
+
 
     public WebDriver getDriver() {
         return driver;

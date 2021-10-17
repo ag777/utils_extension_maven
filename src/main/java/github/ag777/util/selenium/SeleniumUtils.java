@@ -5,6 +5,7 @@ import org.openqa.selenium.SearchContext;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
@@ -30,11 +31,28 @@ public class SeleniumUtils {
      * @return 谷歌浏览器驱动
      */
     public static WebDriver getChromeDriver(String driverPath, Integer globalTimeoutMills) {
+        return getChromeDriver(driverPath, null, globalTimeoutMills);
+    }
+
+    /**
+     *
+     * @param driverPath chromedriver.exe路径
+     * @param options 配置
+     * @param globalTimeoutMills 全局超时时间
+     * @return 谷歌浏览器驱动
+     */
+    public static WebDriver getChromeDriver(String driverPath, ChromeOptions options, Integer globalTimeoutMills) {
         System.setProperty(PROPERTY_KEY_DRIVER,
                 driverPath);
-        ChromeDriver driver = new ChromeDriver();
+        ChromeDriver driver = null;
+        if (options != null) {
+            driver = new ChromeDriver(options);
+        } else {
+            driver = new ChromeDriver();
+        }
+
         // 最大化
-        maximize(driver);
+//        maximize(driver);
         // 设置全局超时
         setGlobalTimeout(driver, globalTimeoutMills);
 
