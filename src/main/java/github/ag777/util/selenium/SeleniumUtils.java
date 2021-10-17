@@ -1,15 +1,18 @@
 package github.ag777.util.selenium;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.SearchContext;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.function.Function;
 
 /**
+ * chrome: http://npm.taobao.org/mirrors/chromedriver/
  * @author ag777 <837915770@vip.qq.com>
  * @Description 对selenium的二次封装
  * @Date 2021/10/12 16:50
@@ -59,6 +62,26 @@ public class SeleniumUtils {
     }
 
     /**
+     *
+     * @param context 页面元素
+     * @param cssQuery cssQuery
+     * @return 页面元素
+     */
+    public static WebElement select(SearchContext context, String cssQuery) {
+        return context.findElement(By.cssSelector(cssQuery));
+    }
+
+    /**
+     *
+     * @param context 页面元素
+     * @param cssQuery cssQuery
+     * @return 页面元素列表
+     */
+    public static List<WebElement> selectAll(SearchContext context, String cssQuery) {
+        return context.findElements(By.cssSelector(cssQuery));
+    }
+
+    /**
      * 寻找元素,带超时
      * @param driver 驱动
      * @param cssQuery cssQuery
@@ -67,6 +90,17 @@ public class SeleniumUtils {
      */
     public static WebElement select(WebDriver driver, String cssQuery, int timeoutMills) {
         return exec(driver, timeoutMills, d -> d.findElement(By.cssSelector(cssQuery)));
+    }
+
+    /**
+     * 查找所有元素
+     * @param driver 驱动
+     * @param cssQuery cssQuery
+     * @param timeoutMills 超时时间(毫秒)
+     * @return 页面元素列表
+     */
+    public static List<WebElement> selectAll(WebDriver driver, String cssQuery, int timeoutMills) {
+        return exec(driver, timeoutMills, d -> d.findElements(By.cssSelector(cssQuery)));
     }
 
     /**
