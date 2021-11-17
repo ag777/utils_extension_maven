@@ -20,13 +20,27 @@ public class FreemarkerUtils {
     public static void main(String[] args) throws IOException, TemplateException {
         process(
 //                new File("D:\\temp\\程序测试\\模板引擎\\模板1.txt"),
-                FreemarkerUtils.class,
-                "",
-                "模板1.txt",
+//                FreemarkerUtils.class,
+//                "",
+                "用户名: ${user}",
                 MapUtils.of(
                         "user", "张三"
                 ), getConsoleWriter()
         );
+    }
+
+    /**
+     *
+     * @param templateContent 模板内容
+     * @param dataModel 数据
+     * @param out 输出文件对应的Writer
+     * @throws IOException io异常
+     * @throws TemplateException 转换异常
+     */
+    public static void process(String templateContent, Object dataModel, Writer out) throws IOException, TemplateException {
+        Configuration config = getConfiguration(StandardCharsets.UTF_8.toString());
+        Template template = new Template("", templateContent, config);
+        template.process(dataModel, out);
     }
 
     /**
@@ -74,6 +88,14 @@ public class FreemarkerUtils {
      */
     public static Writer getConsoleWriter() {
         return new OutputStreamWriter(System.out);
+    }
+
+    /**
+     *
+     * @return 字符串写出流，后续通过toString方法获取模板转换结果
+     */
+    public static Writer getStringWriter() {
+        return new StringWriter();
     }
 
     /**
