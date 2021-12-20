@@ -8,6 +8,7 @@ import com.ag777.util.lang.RegexUtils;
 import com.ag777.util.lang.StringUtils;
 import com.ag777.util.lang.collection.ListUtils;
 import com.ag777.util.lang.collection.MapUtils;
+import github.ag777.util.ffmpeg.model.FfmpegVideoOption;
 import org.slf4j.Logger;
 
 import java.io.BufferedInputStream;
@@ -55,6 +56,49 @@ public class FfmpegHelper {
     }
 
     /**
+     * 格式转换
+     * @param inputFile 输入视频文件
+     * @param outputFile 输出视频文件
+     * @return 命令行是否执行成功
+     * @throws IOException io异常
+     */
+    public boolean formatConvert(File inputFile, File outputFile, FfmpegVideoOption option) throws IOException {
+        // ffmpeg -i input.avi output.mp4
+        List<String> cmdList = ListUtils.of(
+                "ffmpeg", "-i", inputFile.getAbsolutePath()
+        );
+        if (option != null) {
+            // 平均码率
+            if (option.getRate() != null) {
+                cmdList.add("-b:v");
+                cmdList.add(option.getRate()+"k");
+                // -bufsize 用于设置码率控制缓冲器的大小，设置的好处是，让整体的码率更趋近于希望的值，减少波动。（简单来说，比如1 2的平均值是1.5， 1.49 1.51 也是1.5, 当然是第二种比较好）
+                cmdList.add("-bufsize");
+                cmdList.add(option.getRate()+"k");
+            }
+            if (option.getMinRate() != null) {
+                cmdList.add("-minrate");
+                cmdList.add(option.getMinRate()+"k");
+            }
+            if (option.getMaxRate() != null) {
+                cmdList.add("-maxrate");
+                cmdList.add(option.getMaxRate()+"k");
+            }
+            if (option.getVCodec() != null) {
+                cmdList.add("-vcodec");
+                cmdList.add(option.getVCodec());
+            }
+            if (option.getScaleWidth() > 0 || option.getScaleHeight() > 0) {
+                cmdList.add("-vf");
+                cmdList.add("scale="+option.getScaleWidth()+":"+option.getScaleHeight());
+            }
+
+        }
+        cmdList.add(outputFile.getAbsolutePath());
+        return exec(cmdList.toArray(new String[0]));
+    }
+
+    /**
      * 提取片段
      * See <a href="https://trac.ffmpeg.org/wiki/Seeking#Notes">api doc</a>
      * @param srcFile 原视频文件
@@ -85,8 +129,45 @@ public class FfmpegHelper {
         return ffmpegPath+" -i "+srcFile.getAbsolutePath()+" -ss "+startTime+" -to "+endTime+" -c copy "+destFile.getAbsolutePath();
     }
 
-    public boolean concatSameFormat(File destFile, File... files) throws IOException {
-        if (files == null || files.length == 0) {
+    /**
+     * 视频拼接(任意文件)
+     * See <a href="https://trac.ffmpeg.org/wiki/Concatenate">api doc</a>
+     * @param destFile 目标文件
+     * @param srcFiles 源文件
+     * @return 是否拼接成功
+     * @throws IOException io异常
+     */
+    public boolean concat(File destFile, File... srcFiles) throws IOException {
+        if (srcFiles == null || srcFiles.length == 0) {
+            return false;
+        }
+        // ffmpeg -i input1.mp4 -i input2.webm -i input3.mov \
+        // -filter_complex "[0:v:0][0:a:0][1:v:0][1:a:0][2:v:0][2:a:0]concat=n=3:v=1:a=1[outv][outa]" \
+        // -map "[outv]" -map "[outa]" output.mkv
+        List<String> cmdList = ListUtils.of(ffmpegPath);
+        for (File srcFile : srcFiles) {
+            cmdList.add("-i");
+            cmdList.add(srcFile.getAbsolutePath());
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < srcFiles.length; i++) {
+            sb.append("[").append(i).append(":v:0][").append(i).append(":a:0]");
+
+        }
+        sb.append("concat=n=").append(srcFiles.length).append(":v=1:a=1[outv][outa]");
+        cmdList.add("-filter_complex");
+        cmdList.add(sb.toString());
+        cmdList.add("-map");
+        cmdList.add("\"[outv]\"");
+        cmdList.add("-map");
+        cmdList.add("\"[outa]\"");
+        cmdList.add(destFile.getAbsolutePath());
+        return exec(cmdList.toArray(new String[0]));
+    }
+
+    public boolean concatSameFormat(File destFile, File... srcFiles) throws IOException {
+        if (srcFiles == null || srcFiles.length == 0) {
             return false;
         }
         /*
@@ -96,7 +177,7 @@ public class FfmpegHelper {
         String txtPath = DIR_TEMP +StringUtils.uuid();
         debug("temp txt path: "+txtPath);
         try {
-            Files.write(Paths.get(txtPath), Arrays.stream(files).map(file->"file '"+file.getAbsolutePath()+"'").collect(Collectors.toList()));
+            Files.write(Paths.get(txtPath), Arrays.stream(srcFiles).map(file->"file '"+file.getAbsolutePath()+"'").collect(Collectors.toList()));
             String[] cmds = {ffmpegPath, "-f", "concat", "-safe", "0", "-i", txtPath, "-c", "copy", destFile.getAbsolutePath()};
             return exec(cmds);
         } finally {
