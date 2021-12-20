@@ -46,6 +46,16 @@ public class FfmpegHelper {
         this.ffprobePath = new File(ffmpegExeFile.getParent()+"/ffprobe.exe").getAbsolutePath();
     }
 
+//    /**
+//     * 有配置环境变量的情况下，只需要直接用名称调用工具就行
+//     * 环境变量的加入方法: 配置ffmpeg/bin到PATH中
+//     * 环境变量验证: 命令行ffmpeg -version看看返回
+//     */
+//    public FfmpegHelper() {
+//        this.ffmpegPath = "ffmpeg";
+//        this.ffprobePath = "ffprobe";
+//    }
+
     public FfmpegHelper setLogger(Logger logger) {
         this.log = logger;
         return this;
@@ -65,7 +75,7 @@ public class FfmpegHelper {
     public boolean formatConvert(File inputFile, File outputFile, FfmpegVideoOption option) throws IOException {
         // ffmpeg -i input.avi output.mp4
         List<String> cmdList = ListUtils.of(
-                "ffmpeg", "-i", inputFile.getAbsolutePath()
+                ffmpegPath, "-i", inputFile.getAbsolutePath()
         );
         if (option != null) {
             // 平均码率
@@ -133,37 +143,61 @@ public class FfmpegHelper {
      * 视频拼接(任意文件)
      * See <a href="https://trac.ffmpeg.org/wiki/Concatenate">api doc</a>
      * @param destFile 目标文件
+     * @param option 转换配置
      * @param srcFiles 源文件
      * @return 是否拼接成功
      * @throws IOException io异常
      */
-    public boolean concat(File destFile, File... srcFiles) throws IOException {
+    public boolean concat(File destFile, FfmpegVideoOption option, File... srcFiles) throws IOException {
         if (srcFiles == null || srcFiles.length == 0) {
             return false;
         }
-        // ffmpeg -i input1.mp4 -i input2.webm -i input3.mov \
-        // -filter_complex "[0:v:0][0:a:0][1:v:0][1:a:0][2:v:0][2:a:0]concat=n=3:v=1:a=1[outv][outa]" \
-        // -map "[outv]" -map "[outa]" output.mkv
-        List<String> cmdList = ListUtils.of(ffmpegPath);
-        for (File srcFile : srcFiles) {
-            cmdList.add("-i");
-            cmdList.add(srcFile.getAbsolutePath());
+        if (option == null) {
+            return concatSameFormat(destFile, srcFiles);
+        }
+        /*
+        1.根据配置转为相同格式mp4
+        2.调用同格式视频的拼接方法concat完成视频拼接
+         */
+        String tempDir = DIR_TEMP+StringUtils.uuid()+"/";
+        new File(tempDir).mkdir();
+        try {
+            for (int i = 0; i < srcFiles.length; i++) {
+                File srcFile = srcFiles[i];
+                File tempFile = new File(tempDir+StringUtils.uuid()+".mp4");
+                formatConvert(srcFile, tempFile, option);
+                srcFiles[i] = tempFile;
+            }
+            return concatSameFormat(destFile, srcFiles);
+        } finally {
+            FileUtils.delete(tempDir);
         }
 
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < srcFiles.length; i++) {
-            sb.append("[").append(i).append(":v:0][").append(i).append(":a:0]");
-
-        }
-        sb.append("concat=n=").append(srcFiles.length).append(":v=1:a=1[outv][outa]");
-        cmdList.add("-filter_complex");
-        cmdList.add(sb.toString());
-        cmdList.add("-map");
-        cmdList.add("\"[outv]\"");
-        cmdList.add("-map");
-        cmdList.add("\"[outa]\"");
-        cmdList.add(destFile.getAbsolutePath());
-        return exec(cmdList.toArray(new String[0]));
+        
+//        // 没有音频流时不对音频流进行操作
+//        // 分辨率/格式不一致时报错: Input link in0:v0 parameters (size 1280x720, SAR 1:1) do not match the corresponding output link in0:v0 parameters (1920x1080, SAR 1:1)
+//        // ffmpeg -i input1.mp4 -i input2.webm -i input3.mov \
+//        // -filter_complex "[0:v:0][0:a:0][1:v:0][1:a:0][2:v:0][2:a:0]concat=n=3:v=1:a=1[outv][outa]" \
+//        // -map "[outv]" -map "[outa]" output.mkv
+//        List<String> cmdList = ListUtils.of(ffmpegPath);
+//        for (File srcFile : srcFiles) {
+//            cmdList.add("-i");
+//            cmdList.add(srcFile.getAbsolutePath());
+//        }
+//
+//        StringBuilder sb = new StringBuilder();
+//        for (int i = 0; i < srcFiles.length; i++) {
+//            sb.append("[").append(i).append(":v:0][").append(i).append(":a:0]");
+//        }
+//        sb.append("concat=n=").append(srcFiles.length).append(":v=1:a=1[outv][outa]");
+//        cmdList.add("-filter_complex");
+//        cmdList.add(sb.toString());
+//        cmdList.add("-map");
+//        cmdList.add("\"[outv]\"");
+//        cmdList.add("-map");
+//        cmdList.add("\"[outa]\"");
+//        cmdList.add(destFile.getAbsolutePath());
+//        return exec(cmdList.toArray(new String[0]));
     }
 
     public boolean concatSameFormat(File destFile, File... srcFiles) throws IOException {
@@ -296,8 +330,24 @@ public class FfmpegHelper {
               encoder         : AVC Coding
          */
         List<String> lines = readLines(new String[]{ffprobePath, file.getAbsolutePath()});
-        Pattern pFirst = Pattern.compile("^\\s{2}([^\\s]*):.*");
-        Pattern pPair = Pattern.compile("([^\\s]*)\\s*:\\s*([^\\s].*)");
+        Pattern pFirst = Pattern.compile("^\\s{2}(\\S*):.*");
+        Pattern pPair = Pattern.compile("([^\\s]*)\\s*:\\s*(\\S.*)");
+        // Stream #0:0[0x1](eng): Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 1920x1080 [SAR 1:1 DAR 16:9], 1164 kb/s, 25 fps, 25 tbr, 25 tbn
+        /*
+        1: format h264
+        2: width 1920
+        3: height 1080
+        4: rate 1164
+        5: tbr 25
+        6: tbn 25
+         */
+        Pattern pStreamVideo = Pattern.compile("Stream\\s+#\\d:\\d.+: Video:\\s+(\\S*)\\s+[^,]*,[^,]*,\\s+(\\d+)x(\\d+)[^,]*,\\s+(\\d+)\\s*kb/s,\\s+(\\d+)\\s+fps,\\s+(\\d+)\\s+tbr,\\s+(\\d+)\\s+tbn");
+        /*
+        1: format aac
+        2: sampling_rate 音频采样率 48000
+        3: 不知道是啥 125 kb/s
+         */
+        Pattern pStreamAudio = Pattern.compile("Stream\\s+#\\d:\\d.+:\\s+Audio:\\s+(\\S*).+,\\s+(\\d+)\\s+Hz,.+,.+,\\s+(\\d+)\\s+kb/s");
         String group = null;
         for (String line : lines) {
             debug(line);
@@ -320,10 +370,36 @@ public class FfmpegHelper {
                     if (m.find()) {
                         infoMap.put(m.group(1), m.group(2));
                     }
+                } else if ("Duration".equals(group)){
+                    if (!infoMap.containsKey("video")) {
+                        m = pStreamVideo.matcher(line);
+                        if (m.find()) {
+                            infoMap.put("video", MapUtils.putAll(
+                                    new LinkedHashMap<>(6),
+                                    "format", m.group(1),
+                                    "width", m.group(2),
+                                    "height", m.group(3),
+                                    "rate", m.group(4),
+                                    "tbr", m.group(5),
+                                    "tbn", m.group(6)
+                            ));
+                            continue;
+                        }
+                    }
+                    if (!infoMap.containsKey("audio")) {
+                        m = pStreamAudio.matcher(line);
+                        if (m.find()) {
+                            infoMap.put("audio", MapUtils.putAll(
+                                    new LinkedHashMap<>(2),
+                                    "format", m.group(1),
+                                    "sampling_rate", m.group(2)
+                            ));
+//                            continue;
+                        }
+                    }
                 }
             }
         }
-        debug("infoMap: "+GsonUtils.get().toJson(infoMap));
         return infoMap;
     }
 
