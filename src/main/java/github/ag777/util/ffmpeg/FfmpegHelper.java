@@ -341,13 +341,13 @@ public class FfmpegHelper {
         5: tbr 25
         6: tbn 25
          */
-        Pattern pStreamVideo = Pattern.compile("Stream\\s+#\\d:\\d.+: Video:\\s+(\\S*)\\s+[^,]*,[^,]*,\\s+(\\d+)x(\\d+)[^,]*,\\s+(\\d+)\\s*kb/s,\\s+(\\d+)\\s+fps,\\s+(\\d+)\\s+tbr,\\s+(\\d+)\\s+tbn");
+        Pattern pStreamVideo = Pattern.compile("Stream\\s+#\\d:\\d(?:.+)?: Video:\\s+(\\S*)\\s+.+,\\s+(\\d+)x(\\d+)[^,]*,\\s+(\\d+)\\s*kb/s,\\s+(\\d+)\\s+fps,\\s+(\\d+)\\s+tbr,\\s+(\\d+)\\s+tbn");
         /*
         1: format aac
         2: sampling_rate 音频采样率 48000
         3: 不知道是啥 125 kb/s
          */
-        Pattern pStreamAudio = Pattern.compile("Stream\\s+#\\d:\\d.+:\\s+Audio:\\s+(\\S*).+,\\s+(\\d+)\\s+Hz,.+,.+,\\s+(\\d+)\\s+kb/s");
+        Pattern pStreamAudio = Pattern.compile("Stream\\s+#\\d:\\d(?:.+)?:\\s+Audio:\\s+(\\S*).+,\\s+(\\d+)\\s+Hz,.+,.+,\\s+(\\d+)\\s+kb/s");
         String group = null;
         for (String line : lines) {
             debug(line);
