@@ -2,7 +2,6 @@ package github.ag777.util.ffmpeg;
 
 import com.ag777.util.file.FileUtils;
 import com.ag777.util.gson.GsonUtils;
-import com.ag777.util.lang.Console;
 import com.ag777.util.lang.IOUtils;
 import com.ag777.util.lang.RegexUtils;
 import com.ag777.util.lang.StringUtils;
@@ -15,15 +14,14 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalTime;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -125,7 +123,7 @@ public class FfmpegHelper {
         }
         // 如果没有结束时间，则到视频末尾时间结束
         if (endTime == null) {
-            endTime = getDuration(srcFile);
+            endTime = getDurationStr(srcFile);
             debug("=========endtime: "+endTime);
         }
         // ffmpeg -i video.mp4 -ss 00:01:00 -to 00:02:00 -c copy cut.mp4
@@ -232,7 +230,7 @@ public class FfmpegHelper {
             }
             // 如果没有结束时间，则到视频末尾时间结束
             if (endTime == null) {
-                endTime = getDuration(srcFile);
+                endTime = getDurationStr(srcFile);
                 debug("=========endtime: "+endTime);
             }
 
@@ -255,7 +253,7 @@ public class FfmpegHelper {
                         endTime = otherTimes[i+1];
                     } catch (ArrayIndexOutOfBoundsException e) {
                         // 没有指定结束时间，则结束时间定为视频的结束时间
-                        endTime = getDuration(srcFile);
+                        endTime = getDurationStr(srcFile);
                         debug("=========endtime: "+endTime);
                     }
                     File tempFile = new File(tempDirPath+StringUtils.uuid()+extension);
@@ -274,150 +272,180 @@ public class FfmpegHelper {
     }
 
     /**
+     *
+     * @param file 文件
+     * @return 流列表
+     * @throws IOException IO异常
+     */
+    public List<Map<String, Object>> streams(File file) throws IOException {
+        Map<String, Object> infoMap = getInfo(file);
+        return MapUtils.get(infoMap, "streams");
+    }
+
+    /**
      * @param file 视频文件
      * @return 视频长度 HH:mm:ss.SSS
      * @throws IOException io异常
      */
-    public String getDuration(File file) throws IOException {
+    public Double getDuration(File file) throws IOException {
         Map<String, Object> infoMap = getInfo(file);
-        return MapUtils.get(infoMap, "duration");
+        Map<String, Object> formatMap = MapUtils.get(infoMap, "format");
+        return MapUtils.getDouble(formatMap, "duration");
+    }
+
+    /**
+     *
+     * @param file 文件
+     * @return 时长: 00:01:39.267
+     * @throws IOException IO异常
+     */
+    public String getDurationStr(File file) throws IOException {
+        Double duration = getDuration(file);
+        if (duration != null) {
+            LocalTime t = LocalTime.ofNanoOfDay((long) (99.267000*1000000000));
+            return t.toString();
+        }
+        return null;
     }
 
     /**
      *
      * @param file 视频文件
-     * @return {
-     *   "major_brand": "mp42",
-     *   "minor_version": "0",
-     *   "compatible_brands": "mp42isomavc1",
-     *   "creation_time": "2017-07-15T05:13:36.000000Z",
-     *   "duration": "02:21:36.94",
-     *   "start": 0.0
-     * }
+     * @return {@code {
+     *   "streams": [
+     *     {
+     *       "index": 0,
+     *       "codec_name": "mpeg4",
+     *       "codec_long_name": "MPEG-4 part 2",
+     *       "profile": "Simple Profile",
+     *       "codec_type": "video",
+     *       "codec_tag_string": "FMP4",
+     *       "codec_tag": "0x34504d46",
+     *       "width": 1280,
+     *       "height": 720,
+     *       "coded_width": 1280,
+     *       "coded_height": 720,
+     *       "closed_captions": 0,
+     *       "film_grain": 0,
+     *       "has_b_frames": 0,
+     *       "sample_aspect_ratio": "1:1",
+     *       "display_aspect_ratio": "16:9",
+     *       "pix_fmt": "yuv420p",
+     *       "level": 1,
+     *       "chroma_location": "left",
+     *       "refs": 1,
+     *       "quarter_sample": "false",
+     *       "divx_packed": "false",
+     *       "r_frame_rate": "25/1",
+     *       "avg_frame_rate": "25/1",
+     *       "time_base": "1/25",
+     *       "start_pts": 0,
+     *       "start_time": "0.000000",
+     *       "duration_ts": 74,
+     *       "duration": "2.960000",
+     *       "bit_rate": "923225",
+     *       "nb_frames": "74",
+     *       "extradata_size": 47,
+     *       "disposition": {
+     *         "default": 0,
+     *         "dub": 0,
+     *         "original": 0,
+     *         "comment": 0,
+     *         "lyrics": 0,
+     *         "karaoke": 0,
+     *         "forced": 0,
+     *         "hearing_impaired": 0,
+     *         "visual_impaired": 0,
+     *         "clean_effects": 0,
+     *         "attached_pic": 0,
+     *         "timed_thumbnails": 0,
+     *         "captions": 0,
+     *         "descriptions": 0,
+     *         "metadata": 0,
+     *         "dependent": 0,
+     *         "still_image": 0
+     *       }
+     *     },
+     *     {
+     *       "index": 1,
+     *       "codec_name": "mp3",
+     *       "codec_long_name": "MP3 (MPEG audio layer 3)",
+     *       "codec_type": "audio",
+     *       "codec_tag_string": "U[0][0][0]",
+     *       "codec_tag": "0x0055",
+     *       "sample_fmt": "fltp",
+     *       "sample_rate": "48000",
+     *       "channels": 2,
+     *       "channel_layout": "stereo",
+     *       "bits_per_sample": 0,
+     *       "r_frame_rate": "0/0",
+     *       "avg_frame_rate": "0/0",
+     *       "time_base": "3/125",
+     *       "start_pts": 0,
+     *       "start_time": "0.000000",
+     *       "duration_ts": 127,
+     *       "duration": "3.048000",
+     *       "bit_rate": "129016",
+     *       "nb_frames": "127",
+     *       "extradata_size": 12,
+     *       "disposition": {
+     *         "default": 0,
+     *         "dub": 0,
+     *         "original": 0,
+     *         "comment": 0,
+     *         "lyrics": 0,
+     *         "karaoke": 0,
+     *         "forced": 0,
+     *         "hearing_impaired": 0,
+     *         "visual_impaired": 0,
+     *         "clean_effects": 0,
+     *         "attached_pic": 0,
+     *         "timed_thumbnails": 0,
+     *         "captions": 0,
+     *         "descriptions": 0,
+     *         "metadata": 0,
+     *         "dependent": 0,
+     *         "still_image": 0
+     *       }
+     *     }
+     *   ],
+     *   "format": {
+     *     "filename": "D:\\temp\\程序测试\\ffmpeg_output\\1.avi",
+     *     "nb_streams": 2,
+     *     "nb_programs": 0,
+     *     "format_name": "avi",
+     *     "format_long_name": "AVI (Audio Video Interleaved)",
+     *     "start_time": "0.000000",
+     *     "duration": "3.048000",
+     *     "size": "400604",
+     *     "bit_rate": "1051454",
+     *     "probe_score": 100,
+     *     "tags": {
+     *       "software": "Lavf59.10.100"
+     *     }
+     *   }
+     * }}
      * @throws IOException 异常
      */
     public Map<String, Object> getInfo(File file) throws IOException {
-        Map<String, Object> infoMap = new LinkedHashMap<>();
-        /*
-        ffprobe version 2021-12-17-git-b780b6db64-full_build-www.gyan.dev Copyright (c) 2007-2021 the FFmpeg developers
-          built with gcc 11.2.0 (Rev2, Built by MSYS2 project)
-          configuration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-fontconfig --enable-iconv --enable-gnutls --enable-libxml2 --enable-gmp --enable-lzma --enable-libsnappy --enable-zlib --enable-librist --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-libbluray --enable-libcaca --enable-sdl2 --enable-libdav1d --enable-libdavs2 --enable-libuavs3d --enable-libzvbi --enable-librav1e --enable-libsvtav1 --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxavs2 --enable-libxvid --enable-libaom --enable-libopenjpeg --enable-libvpx --enable-libass --enable-frei0r --enable-libfreetype --enable-libfribidi --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-ffnvcodec --enable-nvdec --enable-nvenc --enable-d3d11va --enable-dxva2 --enable-libmfx --enable-libshaderc --enable-vulkan --enable-libplacebo --enable-opencl --enable-libcdio --enable-libgme --enable-libmodplug --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libshine --enable-libtheora --enable-libtwolame --enable-libvo-amrwbenc --enable-libilbc --enable-libgsm --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-ladspa --enable-libbs2b --enable-libflite --enable-libmysofa --enable-librubberband --enable-libsoxr --enable-chromaprint
-          libavutil      57. 11.100 / 57. 11.100
-          libavcodec     59. 14.100 / 59. 14.100
-          libavformat    59. 10.100 / 59. 10.100
-          libavdevice    59.  0.101 / 59.  0.101
-          libavfilter     8. 20.100 /  8. 20.100
-          libswscale      6.  1.101 /  6.  1.101
-          libswresample   4.  0.100 /  4.  0.100
-          libpostproc    56.  0.100 / 56.  0.100
-        Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'G:\RECYCLED\UDrives.{25336920-03F9-11CF-8FD0-00AA00686F13}\新建文件夹\三次元\あやみ旬果\ABP-616=あやみ旬果.mp4':
-          Metadata:
-            major_brand     : mp42
-            minor_version   : 0
-            compatible_brands: mp42isomavc1
-            creation_time   : 2017-07-15T05:13:36.000000Z
-          Duration: 02:21:36.94, start: 0.000000, bitrate: 1317 kb/s
-          Stream #0:0[0x1](und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 125 kb/s (default)
-            Metadata:
-              creation_time   : 2017-07-15T05:13:36.000000Z
-              handler_name    : Sound Media Handler
-              vendor_id       : [0][0][0][0]
-          Stream #0:1[0x2](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 856x480 [SAR 1:1 DAR 107:60], 1188 kb/s, 29.97 fps, 29.97 tbr, 60k tbn (default)
-            Metadata:
-              creation_time   : 2017-07-15T05:13:36.000000Z
-              handler_name    : Video Media Handler
-              vendor_id       : [0][0][0][0]
-              encoder         : AVC Coding
-         */
-        List<String> lines = readLines(new String[]{ffprobePath, file.getAbsolutePath()});
-        Pattern pFirst = Pattern.compile("^\\s{2}(\\S*):.*");
-        Pattern pPair = Pattern.compile("([^\\s]*)\\s*:\\s*(\\S.*)");
-        // Stream #0:0[0x1](eng): Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 1920x1080 [SAR 1:1 DAR 16:9], 1164 kb/s, 25 fps, 25 tbr, 25 tbn
-        /*
-        1: format h264
-        2: width 1920
-        3: height 1080
-        4: rate 1164
-        5: tbr 25
-        6: tbn 25
-         */
-        Pattern pStreamVideo = Pattern.compile("Stream\\s+#\\d:\\d(?:.+)?: Video:\\s+(\\S*)\\s+.+,\\s+(\\d+)x(\\d+)[^,]*,\\s+(\\d+)\\s*kb/s,\\s+(\\d+)\\s+fps,\\s+(\\d+)\\s+tbr,\\s+(\\d+)\\s+tbn");
-        /*
-        1: format aac
-        2: sampling_rate 音频采样率 48000
-        3: 不知道是啥 125 kb/s
-         */
-        Pattern pStreamAudio = Pattern.compile("Stream\\s+#\\d:\\d(?:.+)?:\\s+Audio:\\s+(\\S*).+,\\s+(\\d+)\\s+Hz,.+,.+,\\s+(\\d+)\\s+kb/s");
-        String group = null;
-        for (String line : lines) {
-            debug(line);
-            Matcher m = pFirst.matcher(line);
-            if (m.matches()) {
-                group = m.group(1);
-                if ("Duration".equals(group)) {
-                    // Duration: 02:21:36.94, start: 0.000000, bitrate: 1317 kb/s
-                    Pattern pDuration = Pattern.compile("Duration:\\s*(.+),\\s*start:\\s*(.+),\\s*bitrate:\\s*(.+)\\s*kb/s");
-                    m = pDuration.matcher(line);
-                    if(m.find()) {
-                        infoMap.put("duration", m.group(1));
-                        infoMap.put("start", StringUtils.toFloat(m.group(2)));
-                        infoMap.put("bitrate", StringUtils.toInt(m.group(3)));
-                    }
-                }
-            } else if (group != null) {
-                if ("Metadata".equals(group)) {
-                    m = pPair.matcher(line);
-                    if (m.find()) {
-                        infoMap.put(m.group(1), m.group(2));
-                    }
-                } else if ("Duration".equals(group)){
-                    if (!infoMap.containsKey("video")) {
-                        m = pStreamVideo.matcher(line);
-                        if (m.find()) {
-                            infoMap.put("video", MapUtils.putAll(
-                                    new LinkedHashMap<>(6),
-                                    "format", m.group(1),
-                                    "width", m.group(2),
-                                    "height", m.group(3),
-                                    "rate", m.group(4),
-                                    "tbr", m.group(5),
-                                    "tbn", m.group(6)
-                            ));
-                            continue;
-                        }
-                    }
-                    if (!infoMap.containsKey("audio")) {
-                        m = pStreamAudio.matcher(line);
-                        if (m.find()) {
-                            infoMap.put("audio", MapUtils.putAll(
-                                    new LinkedHashMap<>(2),
-                                    "format", m.group(1),
-                                    "sampling_rate", m.group(2)
-                            ));
-//                            continue;
-                        }
-                    }
-                }
-            }
-        }
-        return infoMap;
+        // ffprobe -v quiet -show_format -show_streams -print_format json 1.mp4
+        String text = readText(
+                new String[]{ffprobePath,"-v","quiet","-show_format","-show_streams","-print_format","json",file.getAbsolutePath()},
+                StandardCharsets.UTF_8);
+        return GsonUtils.get().toMap(text);
     }
 
-    private List<String> readLines(String[] cmds) throws IOException {
+    private String readText(String[] cmds, Charset charset) throws IOException {
         debug("cmd: "+String.join( " ", cmds));
         ProcessBuilder pb = new ProcessBuilder();
         pb.command(cmds);
         pb.redirectErrorStream(true);
         Process p = pb.start();
         p.getOutputStream().close();
-        BufferedInputStream in;
-        try {
-            in = new BufferedInputStream(p.getInputStream());
-            return IOUtils.readLines(in, StandardCharsets.UTF_8);
-        } finally {
-            p.destroy();
-        }
+        return new String(IOUtils.readBytes(p.getInputStream()), charset);
     }
+
+
 
     /**
      * 执行命令
