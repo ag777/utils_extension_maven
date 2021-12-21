@@ -35,8 +35,8 @@ public class FfmpegHelper {
 
     private Logger log;
     private boolean systemOutLog;  // 是否在控制台打印日志
-    private String ffmpegPath;  // ffmpeg.exe文件路径
-    private String ffprobePath; // ffprobe.exe文件路径
+    private final String ffmpegPath;  // ffmpeg.exe文件路径
+    private final String ffprobePath; // ffprobe.exe文件路径
 
     public FfmpegHelper(File ffmpegExeFile) {
         this.ffmpegPath = ffmpegExeFile.getPath();
