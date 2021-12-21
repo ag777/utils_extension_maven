@@ -430,9 +430,23 @@ public class FfmpegHelper {
     public Map<String, Object> getInfo(File file) throws IOException {
         // ffprobe -v quiet -show_format -show_streams -print_format json 1.mp4
         String text = readText(
-                new String[]{ffprobePath,"-v","quiet","-show_format","-show_streams","-print_format","json",file.getAbsolutePath()},
+                new String[]{ffprobePath,"-v","quiet","-show_error","-show_format","-show_streams","-print_format","json",file.getAbsolutePath()},
                 StandardCharsets.UTF_8);
-        return GsonUtils.get().toMap(text);
+        Map<String, Object> map = GsonUtils.get().toMap(text);
+        if (map.containsKey("error")) {
+            /*
+            {
+                "error": {
+                    "code": -2,
+                    "string": "No such file or directory"
+                }
+            }
+             */
+            Map<String, Object> errMap = MapUtils.get(map, "error");
+            String errMsg = MapUtils.getStr(errMap, "code", "")+" "+MapUtils.get(errMap, "string");
+            throw new IOException(errMsg);
+        }
+        return map;
     }
 
     private String readText(String[] cmds, Charset charset) throws IOException {
