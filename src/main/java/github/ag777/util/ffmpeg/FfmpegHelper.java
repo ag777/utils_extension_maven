@@ -517,21 +517,31 @@ public class FfmpegHelper {
     public static void main(String[] args) {
         FfmpegHelper u = new FfmpegHelper(new File("D:\\软件\\制作工具\\ffmpeg-2021-12-17-git-b780b6db64-full_build\\bin\\ffmpeg.exe"));
         u.setSystemOutLog(true);
+        // 提取
 //        u.cut(
 //                new File("G:\\in.mp4"),
 //                new File("D:\\out.mp4"),
 //                "00:01:51",
 //                "00:06:50"
 //        );
+        // 拼接
+//        u.concat(
+//            new File("D:\\\\out.mp4"),
+//            new FfmpegVideoOption().setScaleWidth(720).setScaleHeight(576),
+//            new File("G:\\in1.mp4"),
+//            new File("G:\\in2.avi")
+//            );
+        // 拼接同类视频
 //        u.concatSameFormat(
 //                new File("D:\\out.mp4"),
 //                new File("D:\\in1.mp4"),
 //                new File("D:\\in2.mp4")
 //        );
+        // 获取视频信息
 //        u.getInfo(new File(
 //                "G:\\1.mp4"
 //        ));
-//
+        // 提取视频片段并拼接(用于删除部分片段,比如广告)
 //        u.cutAndConcat(
 //                new File("G:\\in.mp4"),
 //                new File("D:\\out.mp4"),
