@@ -166,7 +166,7 @@ public class FreemarkerUtils {
      * @return 模板
      * @throws IOException 模板格式错误 freemarker.core.ParseException
      */
-    public Template getTemplate(String name, String sourceCode) throws IOException {
+    public static Template getTemplate(String name, String sourceCode) throws IOException {
         Configuration config = FreemarkerUtils.getConfiguration(StandardCharsets.UTF_8.toString());
         return new Template(name, sourceCode, config);
     }
