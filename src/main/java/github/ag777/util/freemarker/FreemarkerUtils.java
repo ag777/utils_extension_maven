@@ -1,10 +1,9 @@
 package github.ag777.util.freemarker;
 
-import com.ag777.util.lang.collection.MapUtils;
+import com.ag777.util.lang.IOUtils;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
-
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 
@@ -17,18 +16,6 @@ public class FreemarkerUtils {
     // 默认模板文件编码
     private static final String DEFAULT_ENCODING = StandardCharsets.UTF_8.toString();
 
-    public static void main(String[] args) throws IOException, TemplateException {
-        process(
-//                new File("D:\\temp\\程序测试\\模板引擎\\模板1.txt"),
-//                FreemarkerUtils.class,
-//                "",
-                "用户名: ${user}",
-                MapUtils.of(
-                        "user", "张三"
-                ), getConsoleWriter()
-        );
-    }
-
     /**
      *
      * @param templateContent 模板内容
@@ -38,9 +25,13 @@ public class FreemarkerUtils {
      * @throws TemplateException 转换异常
      */
     public static void process(String templateContent, Object dataModel, Writer out) throws IOException, TemplateException {
-        Configuration config = getConfiguration(StandardCharsets.UTF_8.toString());
-        Template template = new Template("", templateContent, config);
-        template.process(dataModel, out);
+        try {
+            Configuration config = getConfiguration(StandardCharsets.UTF_8.toString());
+            Template template = new Template("", templateContent, config);
+            template.process(dataModel, out);
+        } finally {
+            IOUtils.close(out);
+        }
     }
 
     /**
@@ -77,7 +68,7 @@ public class FreemarkerUtils {
      */
     public static Writer getWriter(File file) throws FileNotFoundException {
         if (!file.getParentFile().exists()) {
-            file.mkdirs();
+            file.getParentFile().mkdirs();
         }
         return new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
     }
@@ -134,11 +125,15 @@ public class FreemarkerUtils {
      * @throws TemplateException 转换异常
      */
     public static void process(File templateFile, String encoding, Object dataModel, Writer out) throws IOException, TemplateException {
-        Configuration config = getConfiguration(encoding);
-        // 设置模板文件路径
-        config.setDirectoryForTemplateLoading(templateFile.getParentFile());
-        Template template = config.getTemplate(templateFile.getName());
-        template.process(dataModel, out);
+        try {
+            Configuration config = getConfiguration(encoding);
+            // 设置模板文件路径
+            config.setDirectoryForTemplateLoading(templateFile.getParentFile());
+            Template template = config.getTemplate(templateFile.getName());
+            template.process(dataModel, out);
+        } finally {
+            IOUtils.close(out);
+        }
     }
 
     /**
@@ -153,10 +148,14 @@ public class FreemarkerUtils {
      * @throws TemplateException 转换异常
      */
     public static void process(Class<?> clazz, String basePackagePath, String templateName, String encoding, Object dataModel, Writer out) throws IOException, TemplateException {
-        Configuration config = getConfiguration(encoding);
-        config.setClassLoaderForTemplateLoading(clazz.getClassLoader(), basePackagePath);
-        Template template = config.getTemplate(templateName);
-        template.process(dataModel, out);
+        try {
+            Configuration config = getConfiguration(encoding);
+            config.setClassLoaderForTemplateLoading(clazz.getClassLoader(), basePackagePath);
+            Template template = config.getTemplate(templateName);
+            template.process(dataModel, out);
+        } finally {
+            IOUtils.close(out);
+        }
     }
 
     /**
