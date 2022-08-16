@@ -6,9 +6,9 @@ package github.ag777.util.file.excel;
  * @Description 对easypoi的二次封装
  * @Date 2022/3/11 16:14
  */
-public class EasyPoiUtils {
+public class ExcelUtils {
 
-    private EasyPoiUtils() {}
+    private ExcelUtils() {}
 
 //    /**
 //     *
