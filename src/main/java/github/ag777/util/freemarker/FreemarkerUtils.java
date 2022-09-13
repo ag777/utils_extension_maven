@@ -66,6 +66,7 @@ public class FreemarkerUtils {
      * @return 输出文件对应的Writer
      * @throws FileNotFoundException 文件未找到
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public static Writer getWriter(File file) throws FileNotFoundException {
         if (!file.getParentFile().exists()) {
             file.getParentFile().mkdirs();
