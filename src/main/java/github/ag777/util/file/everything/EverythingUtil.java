@@ -3,6 +3,7 @@ package github.ag777.util.file.everything;
 import com.ag777.util.lang.StringUtils;
 import com.sun.jna.Native;
 import com.sun.jna.WString;
+import github.ag777.util.file.everything.model.EverythingCmdOptions;
 
 import java.io.IOException;
 import java.nio.CharBuffer;

@@ -1,4 +1,4 @@
-package github.ag777.util.file.everything;
+package github.ag777.util.file.everything.model;
 
 /**
  * everything 错误枚举
