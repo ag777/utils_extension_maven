@@ -18,9 +18,9 @@
         <dependency>
             <groupId>com.ag777</groupId>
             <artifactId>utils</artifactId>
-            <version>1.2.81</version>
+            <version>1.2.92</version>
             <scope>system</scope>
-            <systemPath>${pom.basedir}/lib/utils-1.2.81.jar</systemPath>
+            <systemPath>${pom.basedir}/lib/utils-1.2.92.jar</systemPath>
         </dependency>
 
         <dependency>
