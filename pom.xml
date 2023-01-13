@@ -102,6 +102,13 @@
             <version>2.4.0</version>
         </dependency>
 
+        <!--文本关键词查找-->
+        <dependency>
+            <groupId>org.ahocorasick</groupId>
+            <artifactId>ahocorasick</artifactId>
+            <version>0.6.3</version>
+        </dependency>
+
 
 
     </dependencies>
