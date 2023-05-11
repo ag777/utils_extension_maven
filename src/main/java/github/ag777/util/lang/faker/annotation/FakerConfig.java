@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * 假数据标注
  *
  * @author ag777 <837915770@vip.qq.com>
- * @Date 2022/11/24 16:06
+ * @version  2022/11/24 16:06
  */
 @Target({ElementType.FIELD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

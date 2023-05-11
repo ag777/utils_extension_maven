@@ -1,9 +1,9 @@
 package github.ag777.util.lang.faker;
 
 import com.ag777.util.lang.RegexUtils;
-import com.github.javafaker.Faker;
 import github.ag777.util.lang.faker.annotation.FakerConfig;
 import github.ag777.util.lang.faker.annotation.FakerSkip;
+import net.datafaker.Faker;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -15,9 +15,15 @@ import java.util.stream.Collectors;
 /**
  * faker库拓展
  * @author ag777 <837915770@vip.qq.com>
- * @Date 2022/11/24 17:57
+ * @version  2023/05/11 11:50
  */
 public class FakerUtils {
+    // 使用语言
+    private static final Locale LOCALE = Locale.CHINA;
+
+    public static Faker newFaker() {
+        return new Faker(LOCALE);
+    }
 
     /**
      *
@@ -28,18 +34,20 @@ public class FakerUtils {
      * @throws IllegalAccessException IllegalAccessException
      */
     public static <T>T build(Class<T> classOfT) throws InstantiationException, IllegalAccessException {
+        Faker faker = newFaker();
         T obj = classOfT.newInstance();
-        return build(obj);
+        return build(obj, faker);
     }
 
     /**
      * 给对象的字段设置随机值
      * @param obj 对象
+     * @param faker 构造器
      * @param <T> 对象类型
      * @return 对象
      * @throws IllegalAccessException 设置字段值时发生异常
      */
-    public static <T>T build(T obj) throws IllegalAccessException {
+    public static <T>T build(T obj, Faker faker) throws IllegalAccessException {
         if (obj == null) {
             return null;
         }
@@ -49,7 +57,7 @@ public class FakerUtils {
             if (field.getAnnotation(FakerSkip.class) != null) {
                 continue;
             }
-            Object value = newVal(new Faker(Locale.CHINA), field);
+            Object value = newVal(faker, field);
             if (value != null) {
                 boolean accessible = field.isAccessible();
                 try {
