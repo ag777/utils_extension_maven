@@ -22,13 +22,39 @@ import java.util.Properties;
 
 /**
  * 邮件发送工具类，对jakarta.mail的二次封装
+ * <p>
+ *     SMTP是专门用于邮件发送的协议，而POP3和IMAP是用于接收邮件的协议<br/>
+ *     IMAP协议相对于POP3（邮局协议版本3）协议具有更多的功能和灵活性，适用于需要在多个设备上同步邮件状态或进行更复杂操作的场景
+ * </p>
+ *
+ * <p>
+ *     IMAP协议的优点包括：
+ *     <ul>
+ *         <li>支持在多个设备上同步邮件，可以在不同设备上查看、删除、标记邮件的状态同步。</li>
+ *         <li>可以在邮件服务器上创建、删除、重命名邮件夹，方便组织和管理邮件。</li>
+ *         <li>支持通过搜索条件来查找邮件，可以根据日期、发件人、主题等进行高级搜索。</li>
+ *         <li>可以部分下载邮件内容，节省带宽和存储空间。</li>
+ *     </ul>
+ * </p>
+ *
+ * @see <a href="https://eclipse-ee4j.github.io/mail/">Jakarta Mail官方文档</a>
  * @author ag777 <837915770@vip.qq.com>
  * @version 2023/9/26 14:46
  */
 public class MailUtils {
 
-    private static final int PORT_NORMAL = 25;
-    private static final int PORT_SSL = 465;
+    /** POP3（邮局协议版本3）默认端口号 */
+    private static final int PORT_POP3 = 110;
+    /** POP3（邮局协议版本3）加密连接端口号 */
+    private static final int PORT_POP3_SSL = 995;
+    /** IMAP（互联网消息访问协议）默认端口号 */
+    private static final int PORT_IMAP = 143;
+    /** IMAP（互联网消息访问协议）加密连接端口号 */
+    private static final int PORT_IMAP_SSL = 993;
+    /** SMTP（简单邮件传输协议）默认端口号 */
+    private static final int PORT_SMTP = 25;
+    /** SMTP（简单邮件传输协议）加密连接端口号 */
+    private static final int PORT_SMTP_SSL = 465;
 
     public static void main(String[] args) throws ValidateException {
         String host = "smtp.qq.com";
@@ -39,7 +65,7 @@ public class MailUtils {
                 from,
                 password,
                 host,
-                PORT_SSL,
+                PORT_SMTP_SSL,
                 ListUtils.of(to),
 //                ListUtils.of(from),
                 null,
