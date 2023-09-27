@@ -44,17 +44,17 @@ import java.util.Properties;
 public class MailUtils {
 
     /** POP3（邮局协议版本3）默认端口号 */
-    private static final int PORT_POP3 = 110;
+    public static final int PORT_POP3 = 110;
     /** POP3（邮局协议版本3）加密连接端口号 */
-    private static final int PORT_POP3_SSL = 995;
+    public static final int PORT_POP3_SSL = 995;
     /** IMAP（互联网消息访问协议）默认端口号 */
-    private static final int PORT_IMAP = 143;
+    public static final int PORT_IMAP = 143;
     /** IMAP（互联网消息访问协议）加密连接端口号 */
-    private static final int PORT_IMAP_SSL = 993;
+    public static final int PORT_IMAP_SSL = 993;
     /** SMTP（简单邮件传输协议）默认端口号 */
-    private static final int PORT_SMTP = 25;
+    public static final int PORT_SMTP = 25;
     /** SMTP（简单邮件传输协议）加密连接端口号 */
-    private static final int PORT_SMTP_SSL = 465;
+    public static final int PORT_SMTP_SSL = 465;
 
     public static void main(String[] args) throws ValidateException {
         String host = "smtp.qq.com";
