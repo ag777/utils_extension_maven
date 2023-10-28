@@ -76,7 +76,7 @@ public class ChatGptHelper {
         public static final String TYPE_GPT_3_5_TURBO = "gpt-3.5-turbo";
         private final GptRequest request;
 
-        private GptMessageBuilder(GptRequest request) {
+        public GptMessageBuilder(GptRequest request) {
             this.request = request;
         }
 
