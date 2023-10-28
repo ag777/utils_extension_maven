@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 /**
  * chat-gpt 接口调用辅助类
@@ -34,7 +35,11 @@ public class ChatGptHelper {
     }
     
     public static ChatGptHelper withProxy(String apiKey, String host, int port) {
-        return new ChatGptHelper(apiKey, HttpUtils.builderWithProxy(null, host, port));
+        return new ChatGptHelper(
+                apiKey,
+                HttpUtils.builderWithProxy(null, host, port)
+                        .readTimeout(3, TimeUnit.MINUTES)
+        );
     }
 
     public static void main(String[] args) throws IOException, ValidateException, JsonSyntaxException {
