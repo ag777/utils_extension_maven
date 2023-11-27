@@ -28,10 +28,15 @@ import java.util.concurrent.TimeUnit;
 public class ChatGptHelper {
     private final String apiKey;
     private final HttpHelper http;
+    private String endpoint = "https://api.openai.com";
     
     public ChatGptHelper(String apiKey, OkHttpClient.Builder builder) {
         this.apiKey = apiKey;
         this.http = new HttpHelper(builder.build(), "chat-gpt");
+    }
+
+    public void setEndpoint(String endpoint) {
+        this.endpoint = endpoint;
     }
     
     public static ChatGptHelper withProxy(String apiKey, String host, int port) {
@@ -57,7 +62,7 @@ public class ChatGptHelper {
     }
     public String post(GptRequest option) throws ValidateException, JsonSyntaxException, IOException {
         MyCall call = http.postJson(
-                "https://api.openai.com/v1/chat/completions",
+                endpoint+"/v1/chat/completions",
                 GsonUtils.get().toJson(option),
                 null,
                 MapUtils.of(
