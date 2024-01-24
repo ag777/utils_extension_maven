@@ -4,18 +4,36 @@ import com.ag777.util.lang.IOUtils;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 
 /**
+ * 对freemarker模板引擎的二次封装
  * @author ag777 <837915770@vip.qq.com>
- * @Description 对freemarker模板引擎的二次封装
- * @Date 2021/10/15 11:47
+ * @version  2024/01/23 11:50
  */
 public class FreemarkerUtils {
     // 默认模板文件编码
     private static final String DEFAULT_ENCODING = StandardCharsets.UTF_8.toString();
 
+    /**
+     *
+     * @param templateContent 模板内容
+     * @param dataModel 数据
+     * @return 处理后的字符串
+     * @throws IOException io异常
+     * @throws TemplateException 转换异常
+     */
+    public static String process(String templateContent, Object dataModel) throws IOException, TemplateException {
+        Writer out = getStringWriter();
+        try {
+            process(templateContent, dataModel, out);
+            return out.toString();
+        } finally {
+            IOUtils.close(out);
+        }
+    }
     /**
      *
      * @param templateContent 模板内容
