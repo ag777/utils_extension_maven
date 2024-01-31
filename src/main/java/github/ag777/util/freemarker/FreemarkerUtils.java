@@ -199,6 +199,8 @@ public class FreemarkerUtils {
         Configuration config = new Configuration(Configuration.VERSION_2_3_0);
         // 设置编码
         config.setDefaultEncoding(encoding);
+        // 设置为没有千位分,避免转换数值出现"1,514"这样的数
+        config.setNumberFormat("0");
         return config;
     }
 }
