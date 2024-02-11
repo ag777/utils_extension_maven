@@ -112,6 +112,7 @@ public class JnaWindowsUtils {
 
     /**
      * 根据进程编号获取文件
+     * 如果找不到进程，请以管理员模式执行
      *
      * @param processId 进程编号
      * @return 进程对应的文件
