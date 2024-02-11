@@ -134,7 +134,7 @@ public class JnaWindowsUtils {
             String path = buffer.getWideString(0);
             return Optional.of(new File(path));
         }
-        return null;
+        return Optional.empty();
     }
 
     /**
