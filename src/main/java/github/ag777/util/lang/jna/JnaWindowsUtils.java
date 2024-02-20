@@ -11,7 +11,9 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * 窗口句柄相关工具类
@@ -208,6 +210,31 @@ public class JnaWindowsUtils {
     public static boolean isWindowMinimized(WinDef.HWND hWnd) {
         int style = User32.INSTANCE.GetWindowLong(hWnd, WinUser.GWL_STYLE);
         return (style & WinUser.WS_MINIMIZE) != 0;
+    }
+
+    /**
+     * 将指定窗口置于前台，如果失败则执行指定的回调函数并等待指定的时间后再次尝试。
+     *
+     * @param hWnd 需要置于前台的窗口句柄。
+     * @param whenFail 当置于前台失败时执行的回调函数，该函数接收一个整数参数（表示失败的尝试次数）并返回一个布尔值（表示是否应停止尝试）。
+     * @param sleepMillsOnFail 失败后重新尝试前的等待时间，单位为毫秒。
+     * @return 如果窗口成功置于前台则返回true，否则返回false。
+     * @throws InterruptedException 如果在等待过程中线程被中断，将抛出此异常。
+     */
+    public static boolean bringWindowToFront(WinDef.HWND hWnd, Predicate<Integer> whenFail, long sleepMillsOnFail) throws InterruptedException {
+        boolean success = false;
+        int attempts = 0;
+        while (!success) {
+            success = JnaWindowsUtils.bringWindowToFront(hWnd);
+            if (!success) {
+                attempts++;
+                if (whenFail.test(attempts)) {
+                    break;
+                }
+                TimeUnit.MILLISECONDS.sleep(sleepMillsOnFail);
+            }
+        }
+        return success;
     }
 
     /**
