@@ -1,4 +1,4 @@
-package github.ag777.util.lang.jna;
+package github.ag777.util.lang.jni;
 
 import com.sun.jna.Library;
 import com.sun.jna.Native;
@@ -6,9 +6,9 @@ import com.sun.jna.Native;
 /**
  * jna调用示例
  * @author ag777 <837915770@vip.qq.com>
- * @Date 2022/10/8 17:15
+ * @version 2022/10/8 17:15
  */
-public class JnaDemo {
+public class JniDemo {
 
     public interface CLibrary extends Library {
         int sum(int a, int b);
