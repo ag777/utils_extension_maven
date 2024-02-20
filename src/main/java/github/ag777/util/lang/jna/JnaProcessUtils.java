@@ -1,4 +1,4 @@
-package github.ag777.util.lang.jni;
+package github.ag777.util.lang.jna;
 
 import com.sun.jna.Native;
 import com.sun.jna.platform.win32.*;

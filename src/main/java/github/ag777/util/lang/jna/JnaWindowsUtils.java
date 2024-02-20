@@ -1,4 +1,4 @@
-package github.ag777.util.lang.jni;
+package github.ag777.util.lang.jna;
 
 import com.ag777.util.lang.StringUtils;
 import com.sun.jna.Memory;
