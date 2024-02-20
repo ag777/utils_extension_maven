@@ -17,7 +17,7 @@ import java.util.function.Function;
  * 窗口句柄相关工具类
  * 对jna以及jna-platform的二次封装
  * @author ag777＜ag777@vip.qq.com＞
- * @version 2024/2/9 11:36
+ * @version 2024/2/20 16:56
  */
 public class JnaWindowsUtils {
     /**
@@ -210,13 +210,13 @@ public class JnaWindowsUtils {
         return (style & WinUser.WS_MINIMIZE) != 0;
     }
 
-
     /**
      * 根据窗口句柄将窗口置于前台
      *
      * @param hWnd 窗口句柄
+     * @return 执行后当前窗口是否是目标窗口
      */
-    public static void bringWindowToFront(WinDef.HWND hWnd) {
+    public static boolean bringWindowToFront(WinDef.HWND hWnd) {
         // 首先检查窗口是否最小化，如果是，则先恢复窗口
         if (isWindowMinimized(hWnd)) {
             User32.INSTANCE.ShowWindow(hWnd, WinUser.SW_RESTORE);
@@ -226,7 +226,7 @@ public class JnaWindowsUtils {
         User32.INSTANCE.SetForegroundWindow(hWnd);
 
         // 如果 SetForegroundWindow 调用失败，尝试其他方法
-        if (hWnd != User32.INSTANCE.GetForegroundWindow()) {
+        if (!isForegroundWindow(hWnd)) {
             // 附加到前台窗口线程以提升权限，然后再次尝试
             WinDef.HWND hForegroundWnd = User32.INSTANCE.GetForegroundWindow();
             int dwCurrentThread = Kernel32.INSTANCE.GetCurrentThreadId();
@@ -237,10 +237,20 @@ public class JnaWindowsUtils {
             User32.INSTANCE.AttachThreadInput(new WinDef.DWORD(dwForegroundThread), new WinDef.DWORD(dwCurrentThread), false);
 
             // 如果窗口仍然不在前台，使用 ShowWindow 尝试强制显示
-            if (hWnd != User32.INSTANCE.GetForegroundWindow()) {
+            if (!isForegroundWindow(hWnd)) {
                 User32.INSTANCE.ShowWindow(hWnd, WinUser.SW_SHOW);
+                return isForegroundWindow(hWnd);
             }
         }
+        return true;
+    }
+
+    /**
+     * @param hWnd 窗口
+     * @return 窗口是否在前台
+     */
+    public static boolean isForegroundWindow(WinDef.HWND hWnd) {
+        return hWnd.equals(User32.INSTANCE.GetForegroundWindow());
     }
 
     public static void main(String[] args) {
