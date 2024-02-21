@@ -216,7 +216,7 @@ public class JnaWindowsUtils {
      * 将指定窗口置于前台，如果失败则执行指定的回调函数并等待指定的时间后再次尝试。
      *
      * @param hWnd 需要置于前台的窗口句柄。
-     * @param whenFail 当置于前台失败时执行的回调函数，该函数接收一个整数参数（表示失败的尝试次数）并返回一个布尔值（表示是否应停止尝试）。
+     * @param whenFail 当置于前台失败时执行的回调函数，该函数接收一个整数参数（表示失败的尝试次数）并返回一个布尔值（表示是否应继续尝试）。
      * @param sleepMillsOnFail 失败后重新尝试前的等待时间，单位为毫秒。
      * @return 如果窗口成功置于前台则返回true，否则返回false。
      * @throws InterruptedException 如果在等待过程中线程被中断，将抛出此异常。
@@ -225,10 +225,10 @@ public class JnaWindowsUtils {
         boolean success = false;
         int attempts = 0;
         while (!success) {
-            success = JnaWindowsUtils.bringWindowToFront(hWnd);
+            success = bringWindowToFront(hWnd);
             if (!success) {
                 attempts++;
-                if (whenFail.test(attempts)) {
+                if (!whenFail.test(attempts)) {
                     break;
                 }
                 TimeUnit.MILLISECONDS.sleep(sleepMillsOnFail);
