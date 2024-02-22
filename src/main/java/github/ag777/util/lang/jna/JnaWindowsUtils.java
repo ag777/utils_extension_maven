@@ -19,7 +19,7 @@ import java.util.function.Predicate;
  * 窗口句柄相关工具类
  * 对jna以及jna-platform的二次封装
  * @author ag777＜ag777@vip.qq.com＞
- * @version 2024/2/22 11:27
+ * @version 2024/2/22 11:42
  */
 public class JnaWindowsUtils {
     /**
@@ -200,6 +200,15 @@ public class JnaWindowsUtils {
     }
 
     /**
+     * 展示窗口
+     * @param hWnd 窗口句柄
+     * @param nCmdShow nCmdShow 展示的形式.可以传WinUser.SW_XXX
+     */
+    public static void showWindow(WinDef.HWND hWnd, int nCmdShow) {
+        User32.INSTANCE.ShowWindow(hWnd, nCmdShow);
+    }
+
+    /**
      * 检查指定的窗口是否被最小化。
      * <p>
      * 此方法通过获取窗口的样式并检查是否包含 WS_MINIMIZE 标志来判断窗口是否最小化。
@@ -245,7 +254,7 @@ public class JnaWindowsUtils {
      */
     public static boolean bringWindowToFront(WinDef.HWND hWnd) {
         // 首先 SW_RESTORE 激活并显示窗口。如果窗口被最小化或最大化，Windows恢复它到原来的大小和位置。
-        User32.INSTANCE.ShowWindow(hWnd, WinUser.SW_RESTORE);
+        showWindow(hWnd, WinUser.SW_RESTORE);
         if (!isForegroundWindow(hWnd)) {
             // 将窗口置于前台
             User32.INSTANCE.SetForegroundWindow(hWnd);
@@ -263,7 +272,7 @@ public class JnaWindowsUtils {
 
                 // 如果窗口仍然不在前台，使用 ShowWindow 尝试强制显示
                 if (!isForegroundWindow(hWnd)) {
-                    User32.INSTANCE.ShowWindow(hWnd, WinUser.SW_SHOW);
+                    showWindow(hWnd, WinUser.SW_SHOW);
                     return isForegroundWindow(hWnd);
                 }
             }
