@@ -7,6 +7,9 @@ import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.*;
 import com.sun.jna.ptr.IntByReference;
 
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +22,7 @@ import java.util.function.Predicate;
  * 窗口句柄相关工具类
  * 对jna以及jna-platform的二次封装
  * @author ag777＜ag777@vip.qq.com＞
- * @version 2024/2/22 11:42
+ * @version 2024/2/23 17:57
  */
 public class JnaWindowsUtils {
     /**
@@ -221,6 +224,90 @@ public class JnaWindowsUtils {
         return (style & WinUser.WS_MINIMIZE) != 0;
     }
 
+    public static WinDef.RECT getWindowRect(WinDef.HWND hWnd) {
+        WinDef.RECT rect = new WinDef.RECT();
+        User32.INSTANCE.GetWindowRect(hWnd, rect);
+        return rect;
+    }
+
+    public static Rectangle getWindowRectangle(WinDef.HWND hWnd) {
+        WinDef.RECT rect = getWindowRect(hWnd);
+        // 窗口左上角的X坐标
+        int x = rect.left;
+        // 窗口左上角的Y坐标
+        int y = rect.top;
+        // 窗口的宽度
+        int width = rect.right - rect.left;
+        // 窗口的高度
+        int height = rect.bottom - rect.top;
+        return new Rectangle(x, y, width, height);
+    }
+
+    /**
+     * 将指定窗口捕获为图像。
+     * <p>
+     * 该方法通过获取窗口的设备上下文（DC），然后创建一个与之兼容的内存DC来捕获窗口内容。
+     * 最后，将捕获的内容转换为Java的BufferedImage对象。
+     * 注意，此方法还考虑了高DPI设置下的坐标换算，确保在高分辨率屏幕上也能正确捕获窗口。
+     * </p>
+     * @param hWnd 窗口的句柄（HWND），是要捕获的窗口的标识。
+     * @return 捕获的窗口内容，作为BufferedImage对象返回。如果过程中发生任何错误，可能返回null。
+     */
+    public static BufferedImage captureWindowToImage(WinDef.HWND hWnd) {
+        WinDef.HDC windowDC = null;
+        WinDef.HDC memDC = null;
+        WinDef.HBITMAP hBitmap = null;
+        try {
+            // 获取指定窗口的设备上下文
+            windowDC = User32.INSTANCE.GetDC(hWnd);
+            // 获取窗口的矩形区域
+            Rectangle rect = getWindowRectangle(hWnd);
+            // 调整矩形区域以适应高DPI设置,只处理宽高
+            adjustRectangleForHighDPI(rect, true);
+            // 创建与给定窗口设备上下文兼容的内存设备上下文
+            memDC = GDI32.INSTANCE.CreateCompatibleDC(windowDC);
+            // 创建一个兼容位图
+            hBitmap = GDI32.INSTANCE.CreateCompatibleBitmap(windowDC, rect.width, rect.height);
+            // 将位图选入到内存设备上下文，并保存旧位图的句柄
+            WinNT.HANDLE oldBitmap = GDI32.INSTANCE.SelectObject(memDC, hBitmap);
+            // 从窗口设备上下文拷贝图像到内存设备上下文
+            GDI32.INSTANCE.BitBlt(memDC, 0, 0, rect.width, rect.height, windowDC, 0, 0, GDI32.SRCCOPY);
+            // 将旧位图选回到内存设备上下文中
+            GDI32.INSTANCE.SelectObject(memDC, oldBitmap);
+
+            // 创建一个BufferedImage来接收从内存设备上下文中拷贝的图像
+            BufferedImage image = new BufferedImage(rect.width, rect.height, BufferedImage.TYPE_INT_RGB);
+            WinGDI.BITMAPINFO bmi = new WinGDI.BITMAPINFO();
+            bmi.bmiHeader.biWidth = rect.width;
+            bmi.bmiHeader.biHeight = -rect.height; // 图像不倒置
+            bmi.bmiHeader.biPlanes = 1;
+            bmi.bmiHeader.biBitCount = 32;
+            bmi.bmiHeader.biCompression = WinGDI.BI_RGB;
+
+            // 准备接收位图的像素数据
+            DataBufferInt buffer = (DataBufferInt) image.getRaster().getDataBuffer();
+            int[] pixels = buffer.getData();
+            Pointer pixelPointer = new Memory(pixels.length * 4); // 每个像素4字节
+            // 从内存设备上下文中的位图中提取图像数据
+            GDI32.INSTANCE.GetDIBits(memDC, hBitmap, 0, rect.height, pixelPointer, bmi, WinGDI.DIB_RGB_COLORS);
+            // 将提取的数据写入BufferedImage
+            pixelPointer.read(0, pixels, 0, pixels.length);
+
+            return image;
+        } finally {
+            // 清理创建的GDI资源
+            if (hBitmap != null) {
+                GDI32.INSTANCE.DeleteObject(hBitmap);
+            }
+            if (memDC != null) {
+                GDI32.INSTANCE.DeleteDC(memDC);
+            }
+            if (windowDC != null) {
+                User32.INSTANCE.ReleaseDC(hWnd, windowDC);
+            }
+        }
+    }
+
     /**
      * 将指定窗口置于前台，如果失败则执行指定的回调函数并等待指定的时间后再次尝试。
      *
@@ -287,6 +374,58 @@ public class JnaWindowsUtils {
      */
     public static boolean isForegroundWindow(WinDef.HWND hWnd) {
         return hWnd.equals(User32.INSTANCE.GetForegroundWindow());
+    }
+
+    /**
+     * 获取主显示器的物理分辨率。
+     * <p>
+     * 此方法返回主显示器的实际分辨率，考虑了可能的DPI缩放设置。
+     * 与 {@code Toolkit.getDefaultToolkit().getScreenSize()} 方法不同，
+     * 它返回的是操作系统报告的屏幕实际使用分辨率，而非Java程序可能看到的逻辑分辨率。
+     * </p>
+     * <p>
+     * 注意：如果系统连接了多个显示器，此方法只返回主显示器的分辨率。
+     * </p>
+     * @return 主显示器的物理分辨率。
+     * @throws IllegalArgumentException 如果没有找到显示屏。
+     */
+    private static Dimension getPhysicalScreenResolution() {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        GraphicsDevice[] gs = ge.getScreenDevices();
+
+        for (GraphicsDevice curGs : gs) {
+            DisplayMode dm = curGs.getDisplayMode();
+            int screenWidth = dm.getWidth();
+            int screenHeight = dm.getHeight();
+            return new Dimension(screenWidth, screenHeight);
+        }
+        throw new IllegalArgumentException("没有找到显示屏");
+    }
+
+    /**
+     * 根据屏幕的DPI设置调整矩形区域的尺寸。
+     * 这个方法用于确保在具有不同DPI设置的显示屏上，矩形区域能够保持其在物理尺寸上的一致性。
+     *
+     * @param r 待调整的矩形区域，调整后的尺寸将直接反映在此对象上。
+     * @param onlyWidthAndHeight 是否只调整矩形的宽度和高度，而不调整x和y坐标。
+     */
+    private static void adjustRectangleForHighDPI(Rectangle r, boolean onlyWidthAndHeight) {
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        Dimension realSize = getPhysicalScreenResolution();
+        if (screenSize.width != realSize.width) {
+            double widthRatio = realSize.width * 1d / screenSize.width;
+            if (!onlyWidthAndHeight) {
+                r.x = (int) Math.ceil(r.x * widthRatio);
+            }
+            r.width = (int) Math.ceil(r.width * widthRatio);
+        }
+        if (screenSize.height != realSize.height) {
+            double heightRatio = realSize.height * 1d / screenSize.height;
+            if (!onlyWidthAndHeight) {
+                r.y = (int) Math.ceil(r.y * heightRatio);
+            }
+            r.height = (int) Math.ceil(r.height * heightRatio);
+        }
     }
 
     public static void main(String[] args) {
