@@ -22,7 +22,7 @@ import java.util.function.Predicate;
  * 窗口句柄相关工具类
  * 对jna以及jna-platform的二次封装
  * @author ag777＜ag777@vip.qq.com＞
- * @version 2024/2/23 17:57
+ * @version 2024/2/26 11:04
  */
 public class JnaWindowsUtils {
     /**
@@ -224,12 +224,54 @@ public class JnaWindowsUtils {
         return (style & WinUser.WS_MINIMIZE) != 0;
     }
 
+    /**
+     * 检查指定的窗口是否处于最大化状态。
+     * <p>
+     * 此方法通过获取窗口的样式并检查是否包含 WS_MAXIMIZE 标志来判断窗口是否最大化。
+     *
+     * @param hWnd 要检查的窗口的句柄（HWND）。
+     * @return 如果窗口已被最大化返回 true，否则返回 false。
+     */
+    public static boolean isWindowMaximized(WinDef.HWND hWnd) {
+        int style = User32.INSTANCE.GetWindowLong(hWnd, WinUser.GWL_STYLE);
+        return (style & WinUser.WS_MAXIMIZE) != 0;
+    }
+
+    /**
+     * 检查指定的窗口是否处于全屏状态。
+     * <p>
+     * 此方法通过获取屏幕的尺寸以及窗口的位置和大小来判断窗口是否全屏。全屏状态下，窗口的大小将与屏幕尺寸相匹配。
+     *
+     * @param hWnd 要检查的窗口的句柄（HWND）。
+     * @return 如果窗口处于全屏状态返回 true，否则返回 false。
+     */
+    public static boolean isWindowFullscreen(WinDef.HWND hWnd) {
+        WinDef.RECT rect = getWindowRect(hWnd);
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        return rect.left == 0 && rect.top == 0
+                && rect.right == screenSize.width && rect.bottom == screenSize.height;
+    }
+    
+    /**
+     * 获取指定窗口的边界矩形。
+     * 此方法用于获取一个窗口的外部尺寸，包括窗口边框。
+     *
+     * @param hWnd 窗口的句柄。
+     * @return 窗口的边界矩形。
+     */
     public static WinDef.RECT getWindowRect(WinDef.HWND hWnd) {
         WinDef.RECT rect = new WinDef.RECT();
         User32.INSTANCE.GetWindowRect(hWnd, rect);
         return rect;
     }
 
+    /**
+     * 获取指定窗口的边界矩形，并转换为Rectangle对象。
+     * 此方法提供了一种方便的方式来处理Java中的矩形，适用于需要在Java图形界面中使用窗口尺寸的场景。
+     *
+     * @param hWnd 窗口的句柄。
+     * @return 窗口的边界矩形，以Rectangle对象表示。
+     */
     public static Rectangle getWindowRectangle(WinDef.HWND hWnd) {
         WinDef.RECT rect = getWindowRect(hWnd);
         // 窗口左上角的X坐标
@@ -244,7 +286,105 @@ public class JnaWindowsUtils {
     }
 
     /**
+     * 获取指定窗口的客户区矩形。
+     * 此方法用于获取窗口的内部尺寸，不包括窗口边框等非客户区部分。
+     * 客户区是窗口内部用于显示内容的区域。
+     *
+     * @param hWnd 窗口的句柄。
+     * @return 窗口的客户区矩形。
+     */
+    public static WinDef.RECT getClientRect(WinDef.HWND hWnd) {
+        WinDef.RECT rect = new WinDef.RECT();
+        User32.INSTANCE.GetClientRect(hWnd, rect);
+        return rect;
+    }
+
+    /**
+     * 获取指定窗口的客户区矩形，并转换为Rectangle对象。
+     * 与getWindowRectangle方法不同，此方法仅涉及窗口的客户区，
+     * 适用于需要准确获取窗口内容区域尺寸的应用场景。
+     *
+     * @param hWnd 窗口的句柄。
+     * @return 窗口的客户区矩形，以Rectangle对象表示。
+     */
+    public static Rectangle getClientRectangle(WinDef.HWND hWnd) {
+        WinDef.RECT rect = getClientRect(hWnd);
+        // 窗口左上角的X坐标
+        int x = rect.left;
+        // 窗口左上角的Y坐标
+        int y = rect.top;
+        // 窗口的宽度
+        int width = rect.right - rect.left;
+        // 窗口的高度
+        int height = rect.bottom - rect.top;
+        return new Rectangle(x, y, width, height);
+    }
+
+    /**
+     * 获取指定窗口的矩形，结合窗口的可见性和最小化状态。
+     * 若窗口不可见或已最小化，则不返回矩形。可以尝试调用前先将窗口前置
+     * 此方法适用于需要考虑窗口状态的高级场景，如窗口布局调整或屏幕捕捉工具。
+     * 坐标取自GetWindowRect，长宽取自GetClientRect
+     *
+     * @param hWnd 窗口的句柄。
+     * @return 如果窗口可见且未最小化，返回窗口的矩形；否则返回空。
+     */
+    public static Optional<Rectangle> getRectangle(WinDef.HWND hWnd) {
+        // 不可见
+        if (!isWindowVisible(hWnd)) {
+            return Optional.empty();
+        }
+        // 最小化
+        if (isWindowMinimized(hWnd)) {
+            return Optional.empty();
+        }
+        WinDef.RECT rect = new WinDef.RECT();
+        User32.INSTANCE.GetWindowRect(hWnd, rect);
+        int x = rect.left;
+        int y = rect.top;
+        User32.INSTANCE.GetClientRect(hWnd, rect);
+        int width = rect.right - rect.left;
+        int height = rect.bottom - rect.top;
+        return Optional.of(new Rectangle(x, y, width, height));
+    }
+
+    /**
+     * 捕获指定窗口的屏幕截图并以 BufferedImage 的形式返回。
+     * 使用内部创建的 Robot 实例来执行屏幕捕获。
+     *
+     * @param hWnd 要捕获的窗口的句柄（HWND）。
+     * @return 如果成功捕获窗口，则返回包含窗口截图的 Optional<BufferedImage>；如果窗口矩形无法获取，则返回 Optional.empty()。
+     * @throws AWTException 如果 Robot 实例的创建失败。
+     */
+    public static Optional<BufferedImage> captureWindowToImage(WinDef.HWND hWnd) throws AWTException {
+        Optional<Rectangle> rectangle = getRectangle(hWnd);
+        if (!rectangle.isPresent()) {
+            return Optional.empty();
+        }
+        Rectangle r = JnaWindowsUtils.adjustRectangleForHighDPI(rectangle.get(), false);;
+        Robot robot = new Robot();
+        return Optional.ofNullable(robot.createScreenCapture(new Rectangle(r.x, r.y, r.width, r.height)));
+    }
+
+    /**
+     * 使用给定的 Robot 实例捕获指定窗口的屏幕截图，并以 BufferedImage 的形式返回。
+     *
+     * @param hWnd  要捕获的窗口的句柄（HWND）。
+     * @param robot 用于屏幕捕获的 Robot 实例。
+     * @return 如果成功捕获窗口，则返回包含窗口截图的 Optional<BufferedImage>；如果窗口矩形无法获取，则返回 Optional.empty()。
+     */
+    public static Optional<BufferedImage> captureWindowToImage(WinDef.HWND hWnd, Robot robot) {
+        Optional<Rectangle> rectangle = getRectangle(hWnd);
+        if (!rectangle.isPresent()) {
+            return Optional.empty();
+        }
+        Rectangle r = JnaWindowsUtils.adjustRectangleForHighDPI(rectangle.get(), false);;
+        return Optional.ofNullable(robot.createScreenCapture(new Rectangle(r.x, r.y, r.width, r.height)));
+    }
+
+    /**
      * 将指定窗口捕获为图像。
+     * 经常截取的结果图片是纯黑的，请改为使用Robot类的createScreenCapture实现屏幕截图
      * <p>
      * 该方法通过获取窗口的设备上下文（DC），然后创建一个与之兼容的内存DC来捕获窗口内容。
      * 最后，将捕获的内容转换为Java的BufferedImage对象。
@@ -253,7 +393,8 @@ public class JnaWindowsUtils {
      * @param hWnd 窗口的句柄（HWND），是要捕获的窗口的标识。
      * @return 捕获的窗口内容，作为BufferedImage对象返回。如果过程中发生任何错误，可能返回null。
      */
-    public static BufferedImage captureWindowToImage(WinDef.HWND hWnd) {
+    @Deprecated
+    public static BufferedImage _captureWindowToImage(WinDef.HWND hWnd) {
         WinDef.HDC windowDC = null;
         WinDef.HDC memDC = null;
         WinDef.HBITMAP hBitmap = null;
@@ -261,7 +402,7 @@ public class JnaWindowsUtils {
             // 获取指定窗口的设备上下文
             windowDC = User32.INSTANCE.GetDC(hWnd);
             // 获取窗口的矩形区域
-            Rectangle rect = getWindowRectangle(hWnd);
+            Rectangle rect = getClientRectangle(hWnd);
             // 调整矩形区域以适应高DPI设置,只处理宽高
             adjustRectangleForHighDPI(rect, true);
             // 创建与给定窗口设备上下文兼容的内存设备上下文
@@ -377,6 +518,28 @@ public class JnaWindowsUtils {
     }
 
     /**
+     * 获取系统的屏幕宽度。
+     * <p>
+     * 此方法通过调用 GetSystemMetrics 函数并传入 SM_CXSCREEN 参数来获取屏幕的宽度。
+     *
+     * @return 屏幕宽度。
+     */
+    public static int getScreenWidth() {
+        return User32.INSTANCE.GetSystemMetrics(WinUser.SM_CXSCREEN);
+    }
+
+    /**
+     * 获取系统的屏幕高度。
+     * <p>
+     * 此方法通过调用 GetSystemMetrics 函数并传入 SM_CYSCREEN 参数来获取屏幕的高度。
+     *
+     * @return 屏幕高度。
+     */
+    public static int getScreenHeight() {
+        return User32.INSTANCE.GetSystemMetrics(WinUser.SM_CYSCREEN);
+    }
+
+    /**
      * 获取主显示器的物理分辨率。
      * <p>
      * 此方法返回主显示器的实际分辨率，考虑了可能的DPI缩放设置。
@@ -385,6 +548,11 @@ public class JnaWindowsUtils {
      * </p>
      * <p>
      * 注意：如果系统连接了多个显示器，此方法只返回主显示器的分辨率。
+     * </p>
+     * <p>
+     * 在大多数情况下，和User32.INSTANCE.GetSystemMetrics获取的屏幕分辨率会是相同的，特别是在单显示器配置中。然而，它们在概念上是不同的：
+     * User32.INSTANCE.GetSystemMetrics 方法更多地关注操作系统层面的设置，适用于需要根据实际用户设置来调整应用程序窗口大小或布局的场景。
+     * GraphicsEnvironment 和相关类提供的方法更接近于硬件层面，可以用于获取更详细的显示设备信息，包括但不限于分辨率。这对于需要深入了解连接显示设备特性的应用程序（如多显示器管理软件）来说非常有用。
      * </p>
      * @return 主显示器的物理分辨率。
      * @throws IllegalArgumentException 如果没有找到显示屏。
@@ -408,8 +576,9 @@ public class JnaWindowsUtils {
      *
      * @param r 待调整的矩形区域，调整后的尺寸将直接反映在此对象上。
      * @param onlyWidthAndHeight 是否只调整矩形的宽度和高度，而不调整x和y坐标。
+     * @return 矩形区域
      */
-    private static void adjustRectangleForHighDPI(Rectangle r, boolean onlyWidthAndHeight) {
+    public static Rectangle adjustRectangleForHighDPI(Rectangle r, boolean onlyWidthAndHeight) {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         Dimension realSize = getPhysicalScreenResolution();
         if (screenSize.width != realSize.width) {
@@ -426,6 +595,7 @@ public class JnaWindowsUtils {
             }
             r.height = (int) Math.ceil(r.height * heightRatio);
         }
+        return r;
     }
 
     public static void main(String[] args) {
