@@ -22,7 +22,7 @@ import java.util.function.Predicate;
  * 窗口句柄相关工具类
  * 对jna以及jna-platform的二次封装
  * @author ag777＜ag777@vip.qq.com＞
- * @version 2024/2/26 11:04
+ * @version 2024/2/29 17:11
  */
 public class JnaWindowsUtils {
     /**
@@ -481,6 +481,9 @@ public class JnaWindowsUtils {
      * @return 执行后当前窗口是否是目标窗口
      */
     public static boolean bringWindowToFront(WinDef.HWND hWnd) {
+        if (isForegroundWindow(hWnd)) {
+            return true;
+        }
         // 首先 SW_RESTORE 激活并显示窗口。如果窗口被最小化或最大化，Windows恢复它到原来的大小和位置。
         showWindow(hWnd, WinUser.SW_RESTORE);
         if (!isForegroundWindow(hWnd)) {
