@@ -484,32 +484,42 @@ public class JnaWindowsUtils {
         if (isForegroundWindow(hWnd)) {
             return true;
         }
-        // 首先 SW_RESTORE 激活并显示窗口。如果窗口被最小化或最大化，Windows恢复它到原来的大小和位置。
-        showWindow(hWnd, WinUser.SW_RESTORE);
-        if (!isForegroundWindow(hWnd)) {
-            // 将窗口置于前台
-            User32.INSTANCE.SetForegroundWindow(hWnd);
 
-            // 如果 SetForegroundWindow 调用失败，尝试其他方法
-            if (!isForegroundWindow(hWnd)) {
-                // 附加到前台窗口线程以提升权限，然后再次尝试
-                WinDef.HWND hForegroundWnd = User32.INSTANCE.GetForegroundWindow();
-                int dwCurrentThread = Kernel32.INSTANCE.GetCurrentThreadId();
-                int dwForegroundThread = User32.INSTANCE.GetWindowThreadProcessId(hForegroundWnd, null);
-
-                User32.INSTANCE.AttachThreadInput(new WinDef.DWORD(dwForegroundThread), new WinDef.DWORD(dwCurrentThread), true);
-                User32.INSTANCE.SetForegroundWindow(hWnd);
-                User32.INSTANCE.AttachThreadInput(new WinDef.DWORD(dwForegroundThread), new WinDef.DWORD(dwCurrentThread), false);
-
-                // 如果窗口仍然不在前台，使用 ShowWindow 尝试强制显示
-                if (!isForegroundWindow(hWnd)) {
-                    showWindow(hWnd, WinUser.SW_SHOW);
-                    return isForegroundWindow(hWnd);
-                }
+        if (isWindowMinimized(hWnd)) {
+            User32.INSTANCE.ShowWindow(hWnd, WinUser.SW_MAXIMIZE);
+            User32.INSTANCE.ShowWindow(hWnd, WinUser.SW_NORMAL);
+            if (isForegroundWindow(hWnd)) {
+                return true;
             }
         }
+        // 尝试将窗口设置为前台窗口
+        User32.INSTANCE.SetForegroundWindow(hWnd);
+        if (isForegroundWindow(hWnd)) {
+            return true;
+        }
+        // 获取当前窗口状态
+        WinUser.WINDOWPLACEMENT placement = new WinUser.WINDOWPLACEMENT();
+        User32.INSTANCE.GetWindowPlacement(hWnd, placement);
+        // 最小化窗口
+        User32.INSTANCE.ShowWindow(hWnd, WinUser.SW_MINIMIZE);
+        // 根据记录的状态恢复窗口
+        User32.INSTANCE.SetWindowPlacement(hWnd, placement);
 
-        return true;
+        if (isForegroundWindow(hWnd)) {
+            return true;
+        }
+
+        int currentThreadId = Kernel32.INSTANCE.GetCurrentThreadId();
+        int windowThreadId = User32.INSTANCE.GetWindowThreadProcessId(hWnd, null);
+
+        // 附加到目标窗口所在的线程，尝试将窗口置前
+        if (User32.INSTANCE.AttachThreadInput(new WinDef.DWORD(windowThreadId), new WinDef.DWORD(currentThreadId), true)) {
+            User32.INSTANCE.ShowWindow(hWnd, WinUser.SW_SHOW);
+            User32.INSTANCE.SetForegroundWindow(hWnd);
+            User32.INSTANCE.AttachThreadInput(new WinDef.DWORD(windowThreadId), new WinDef.DWORD(currentThreadId), false);
+        }
+
+        return isForegroundWindow(hWnd);
     }
 
     /**
