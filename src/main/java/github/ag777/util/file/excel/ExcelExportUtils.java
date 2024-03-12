@@ -22,9 +22,9 @@ import java.util.stream.IntStream;
  * @author ag777 <837915770@vip.qq.com>
  * @version 2024/3/12 11:34
  */
-public class ExcelUtils {
+public class ExcelExportUtils {
 
-    private ExcelUtils() {}
+    private ExcelExportUtils() {}
 
     public static void main(String[] args) throws IOException {
         export("D:\\b.xlsx", new File("d:/c.xlsx"), MapUtils.of("a", 1));
