@@ -2,23 +2,25 @@ package github.ag777.util.file.excel;
 
 import cn.afterturn.easypoi.excel.ExcelExportUtil;
 import cn.afterturn.easypoi.excel.entity.TemplateExportParams;
+import cn.afterturn.easypoi.exception.excel.ExcelExportException;
 import com.ag777.util.lang.IOUtils;
 import com.ag777.util.lang.collection.MapUtils;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 
-import java.util.List;
-import java.util.Map;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 /**
  * 对easypoi的二次封装
  * @author ag777 <837915770@vip.qq.com>
- * @version 2023/3/22 10:15
+ * @version 2024/3/12 11:34
  */
 public class ExcelUtils {
 
@@ -30,23 +32,48 @@ public class ExcelUtils {
 
     /**
      * 导出单个sheet的excel文件
+     *
      * @param templatePath 模板文件路径，如果在resource下，不加第一个/
-     * @param outputFile 输出文件
-     * @param dataMap 数据
+     * @param outputFile   输出文件
+     * @param dataMap      数据
+     * @return excel文件
      * @throws IOException IO异常
      */
-    public static void export(String templatePath, File outputFile, Map<String, Object> dataMap) throws IOException {
-        TemplateExportParams params = new TemplateExportParams(templatePath);
-        //开启横向遍历 开启横向遍历 开启横向遍历
-        params.setColForEach(true);
-        Workbook workbook = ExcelExportUtil.exportExcel(params, dataMap);
-        FileOutputStream out = null;
+    public static File export(String templatePath, File outputFile, Map<String, Object> dataMap) throws ExcelExportException, IOException {
+        return export(templatePath, outputFile, dataMap, null);
+    }
+
+    /**
+     * 导出单个sheet的excel文件
+     *
+     * @param templatePath    模板文件路径，如果在resource下，不加第一个/
+     * @param outputFile      输出文件
+     * @param dataMap         数据
+     * @param workbookHandler 处理workbook的回调
+     * @return excel文件
+     * @throws IOException IO异常
+     */
+    public static File export(String templatePath, File outputFile, Map<String, Object> dataMap, Consumer<Workbook> workbookHandler) throws ExcelExportException, IOException {
+        Workbook workbook = export2WorkBook(templatePath, dataMap);
         try {
-            out = new FileOutputStream(outputFile);
-            workbook.write(out);
+            if (workbookHandler != null) {
+                workbookHandler.accept(workbook);
+            }
+            return write2File(workbook, outputFile);
         } finally {
-            IOUtils.close(out);
+            IOUtils.close(workbook);
         }
+    }
+
+    public static Workbook export2WorkBook(String templatePath, Map<String, Object> dataMap) throws ExcelExportException {
+        TemplateExportParams params = new TemplateExportParams(templatePath);
+        // 开启横向遍历 开启横向遍历 开启横向遍历
+        params.setColForEach(true);
+        Workbook wb = ExcelExportUtil.exportExcel(params, dataMap);
+        if (wb == null) {
+            throw new ExcelExportException("导出excel异常，详情请看日志");
+        }
+        return wb;
     }
 
     /**
@@ -57,7 +84,7 @@ public class ExcelUtils {
      * @return 根据模板生成的文件
      * @throws IOException io异常
      */
-    public static File exportWithMultiSheet(String templatePath, File outputFile, List<Map<String, Object>> dataList) throws IOException {
+    public static File exportWithMultiSheet(String templatePath, File outputFile, List<Map<String, Object>> dataList) throws ExcelExportException, IOException {
         TemplateExportParams params = new TemplateExportParams(templatePath);
         // 开启横向遍历 开启横向遍历 开启横向遍历
         params.setColForEach(true);
@@ -82,7 +109,7 @@ public class ExcelUtils {
      * @return 根据模板生成的文件
      * @throws IOException io异常
      */
-    public static File exportWithMultiSheet(String templatePath, File outputFile, Map<String, Object> dataMap) throws IOException {
+    public static File exportWithMultiSheet(String templatePath, File outputFile, Map<String, Object> dataMap) throws ExcelExportException, IOException {
         int sheetCount = getSheetCount(new File(templatePath));
         return exportWithMultiSheet(templatePath, outputFile, dataMap, sheetCount);
     }
@@ -96,7 +123,7 @@ public class ExcelUtils {
      * @return 根据模板生成的文件
      * @throws IOException io异常
      */
-    public static File exportWithMultiSheet(String templatePath, File outputFile, Map<String, Object> dataMap, int sheetCount) throws IOException {
+    public static File exportWithMultiSheet(String templatePath, File outputFile, Map<String, Object> dataMap, int sheetCount) throws ExcelExportException, IOException {
         TemplateExportParams params = new TemplateExportParams(templatePath);
 
         // 开启横向遍历 开启横向遍历 开启横向遍历
@@ -120,15 +147,22 @@ public class ExcelUtils {
         }
     }
 
-    public static File exportExcel(Map<Integer, Map<String, Object>> sheetDataMap, TemplateExportParams params, File outputFile) throws IOException {
+    public static File exportExcel(Map<Integer, Map<String, Object>> sheetDataMap, TemplateExportParams params, File outputFile) throws ExcelExportException, IOException {
         Workbook workbook = ExcelExportUtil.exportExcel(sheetDataMap, params);
+        return write2File(workbook, outputFile);
+    }
+
+    public static File write2File(Workbook wb, File outputFile) throws IOException {
         FileOutputStream out = null;
         try {
+            // 创建父文件夹
+            outputFile.getParentFile().mkdirs();
             out = new FileOutputStream(outputFile);
-            workbook.write(out);
+            // 写出文件
+            wb.write(out);
             return outputFile;
         } finally {
-            IOUtils.close(workbook, out);
+            IOUtils.close(wb, out);
         }
     }
 
