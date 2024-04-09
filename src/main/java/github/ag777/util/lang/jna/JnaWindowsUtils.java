@@ -1,5 +1,6 @@
 package github.ag777.util.lang.jna;
 
+import com.ag777.util.lang.ObjectUtils;
 import com.ag777.util.lang.StringUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -31,7 +33,71 @@ public class JnaWindowsUtils {
      * @return 窗口句柄列表
      */
     public static List<WinDef.HWND> getAllWindows() {
-        return findWindows(hwd-> hwd);
+        return findWindows((Function<WinDef.HWND, WinDef.HWND>) hwd-> hwd);
+    }
+
+    /**
+     * 等待一个窗口出现，直到超时。
+     *
+     * @param finder 用于查找窗口的谓词条件。
+     * @param timeout 等待的超时时间。
+     * @param timeUnit 超时时间的单位。
+     * @return 找到的第一个满足条件的窗口句柄。
+     * @throws InterruptedException 如果等待过程中被中断。
+     * @throws TimeoutException 如果超过指定的超时时间仍未找到窗口。
+     */
+    public static WinDef.HWND waitForWindow(Predicate<WinDef.HWND> finder, int timeout, TimeUnit timeUnit) throws InterruptedException, TimeoutException {
+        // 先尝试查找一次窗口
+        Optional<WinDef.HWND> wp1 = findFirstWindow(finder);
+        if (wp1.isPresent()) {
+            return wp1.get();
+        }
+        if (timeout > 0) {
+            WinDef.HWND[] w = new WinDef.HWND[1];
+            // 监视器，直到找到窗口或超时
+            ObjectUtils.monitor(()->{
+                Optional<WinDef.HWND> wp = findFirstWindow(finder);
+                if (wp.isPresent()) {
+                    w[0] = wp.get();
+                    return true;
+                }
+                return false;
+            }, timeout, timeUnit);
+            return w[0];
+        }
+        throw new TimeoutException();
+    }
+
+    /**
+     * 使用给定的谓词查找所有满足条件的窗口。
+     *
+     * @param finder 用于查找窗口的谓词条件。
+     * @return 所有满足条件的窗口句柄列表。
+     */
+    public static List<WinDef.HWND> findWindows(Predicate<WinDef.HWND> finder) {
+        // 通过函数式接口转换实现查找
+        return findWindows((Function<WinDef.HWND, WinDef.HWND>) hwnd -> {
+            if (finder.test(hwnd)) {
+                return hwnd;
+            }
+            return null;
+        });
+    }
+
+    /**
+     * 查找第一个满足条件的窗口。
+     *
+     * @param finder 用于查找窗口的谓词条件。
+     * @return 找到的第一个满足条件的窗口句柄的Optional实例。
+     */
+    public static Optional<WinDef.HWND> findFirstWindow(Predicate<WinDef.HWND> finder) {
+        // 通过函数式接口转换实现查找
+        return findFirstWindow((Function<WinDef.HWND, WinDef.HWND>) hwnd -> {
+            if (finder.test(hwnd)) {
+                return hwnd;
+            }
+            return null;
+        });
     }
 
     /**
@@ -577,7 +643,7 @@ public class JnaWindowsUtils {
     }
 
     public static void main(String[] args) {
-        List<WinDef.HWND> windows = findWindows(hwd -> {
+        List<WinDef.HWND> windows = findWindows((Function<WinDef.HWND, WinDef.HWND>)  hwd -> {
             Optional<File> file = getFile(hwd);
             if (!file.isPresent()) {
                 return null;
