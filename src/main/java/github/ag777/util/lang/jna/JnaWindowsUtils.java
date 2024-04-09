@@ -22,7 +22,7 @@ import java.util.function.Predicate;
  * 窗口句柄相关工具类
  * 对jna以及jna-platform的二次封装
  * @author ag777＜ag777@vip.qq.com＞
- * @version 2024/2/29 17:11
+ * @version 2024/4/09 15:35
  */
 public class JnaWindowsUtils {
     /**
@@ -329,62 +329,20 @@ public class JnaWindowsUtils {
      * @param hWnd 窗口的句柄。
      * @return 如果窗口可见且未最小化，返回窗口的矩形；否则返回空。
      */
-    public static Optional<Rectangle> getRectangle(WinDef.HWND hWnd) {
-        // 不可见
-        if (!isWindowVisible(hWnd)) {
-            return Optional.empty();
-        }
-        // 最小化
-        if (isWindowMinimized(hWnd)) {
-            return Optional.empty();
-        }
-        WinDef.RECT rect = new WinDef.RECT();
-        User32.INSTANCE.GetWindowRect(hWnd, rect);
+    public static Rectangle getRectangle(WinDef.HWND hWnd) {
+        WinDef.RECT rect = getWindowRect(hWnd);
         int x = rect.left;
         int y = rect.top;
         User32.INSTANCE.GetClientRect(hWnd, rect);
         int width = rect.right - rect.left;
         int height = rect.bottom - rect.top;
-        return Optional.of(new Rectangle(x, y, width, height));
-    }
-
-    /**
-     * 捕获指定窗口的屏幕截图并以 BufferedImage 的形式返回。
-     * 使用内部创建的 Robot 实例来执行屏幕捕获。
-     *
-     * @param hWnd 要捕获的窗口的句柄（HWND）。
-     * @return 如果成功捕获窗口，则返回包含窗口截图的 Optional<BufferedImage>；如果窗口矩形无法获取，则返回 Optional.empty()。
-     * @throws AWTException 如果 Robot 实例的创建失败。
-     */
-    public static Optional<BufferedImage> captureWindowToImage(WinDef.HWND hWnd) throws AWTException {
-        Optional<Rectangle> rectangle = getRectangle(hWnd);
-        if (!rectangle.isPresent()) {
-            return Optional.empty();
-        }
-        Rectangle r = JnaWindowsUtils.adjustRectangleForHighDPI(rectangle.get(), false);;
-        Robot robot = new Robot();
-        return Optional.ofNullable(robot.createScreenCapture(new Rectangle(r.x, r.y, r.width, r.height)));
-    }
-
-    /**
-     * 使用给定的 Robot 实例捕获指定窗口的屏幕截图，并以 BufferedImage 的形式返回。
-     *
-     * @param hWnd  要捕获的窗口的句柄（HWND）。
-     * @param robot 用于屏幕捕获的 Robot 实例。
-     * @return 如果成功捕获窗口，则返回包含窗口截图的 Optional<BufferedImage>；如果窗口矩形无法获取，则返回 Optional.empty()。
-     */
-    public static Optional<BufferedImage> captureWindowToImage(WinDef.HWND hWnd, Robot robot) {
-        Optional<Rectangle> rectangle = getRectangle(hWnd);
-        if (!rectangle.isPresent()) {
-            return Optional.empty();
-        }
-        Rectangle r = JnaWindowsUtils.adjustRectangleForHighDPI(rectangle.get(), false);;
-        return Optional.ofNullable(robot.createScreenCapture(new Rectangle(r.x, r.y, r.width, r.height)));
+        return new Rectangle(x, y, width, height);
     }
 
     /**
      * 将指定窗口捕获为图像。
-     * 经常截取的结果图片是纯黑的，请改为使用Robot类的createScreenCapture实现屏幕截图
+     * 截取chrome浏览器成的图片纯黑(原因未知)
+     * 可能截取不到窗口标题栏，请使用Robot类自行截取
      * <p>
      * 该方法通过获取窗口的设备上下文（DC），然后创建一个与之兼容的内存DC来捕获窗口内容。
      * 最后，将捕获的内容转换为Java的BufferedImage对象。
@@ -403,8 +361,6 @@ public class JnaWindowsUtils {
             windowDC = User32.INSTANCE.GetDC(hWnd);
             // 获取窗口的矩形区域
             Rectangle rect = getClientRectangle(hWnd);
-            // 调整矩形区域以适应高DPI设置,只处理宽高
-            adjustRectangleForHighDPI(rect, true);
             // 创建与给定窗口设备上下文兼容的内存设备上下文
             memDC = GDI32.INSTANCE.CreateCompatibleDC(windowDC);
             // 创建一个兼容位图
@@ -487,7 +443,6 @@ public class JnaWindowsUtils {
 
         if (isWindowMinimized(hWnd)) {
             User32.INSTANCE.ShowWindow(hWnd, WinUser.SW_MAXIMIZE);
-            User32.INSTANCE.ShowWindow(hWnd, WinUser.SW_NORMAL);
             if (isForegroundWindow(hWnd)) {
                 return true;
             }
@@ -584,35 +539,44 @@ public class JnaWindowsUtils {
     }
 
     /**
-     * 根据屏幕的DPI设置调整矩形区域的尺寸。
-     * 这个方法用于确保在具有不同DPI设置的显示屏上，矩形区域能够保持其在物理尺寸上的一致性。
+     * 查找指定父窗口的所有子窗口。
      *
-     * @param r 待调整的矩形区域，调整后的尺寸将直接反映在此对象上。
-     * @param onlyWidthAndHeight 是否只调整矩形的宽度和高度，而不调整x和y坐标。
-     * @return 矩形区域
+     * @param hwndParent 父窗口的句柄。
+     * @param finder 一个谓词，用于测试每个子窗口是否符合查找条件。
+     * @return 所有满足查找条件的子窗口的句柄列表。
      */
-    public static Rectangle adjustRectangleForHighDPI(Rectangle r, boolean onlyWidthAndHeight) {
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        Dimension realSize = getPhysicalScreenResolution();
-        if (screenSize.width != realSize.width) {
-            double widthRatio = realSize.width * 1d / screenSize.width;
-            if (!onlyWidthAndHeight) {
-                r.x = (int) Math.ceil(r.x * widthRatio);
+    public static List<WinDef.HWND> findChildren(WinDef.HWND hwndParent, Predicate<WinDef.HWND> finder) {
+        final List<WinDef.HWND> found = new ArrayList<>(); // 用于保存找到的子窗口句柄
+
+        // 枚举hwndParent的所有子窗口，对每个子窗口应用finder谓词
+        User32.INSTANCE.EnumChildWindows(hwndParent, new WinUser.WNDENUMPROC() {
+            @Override
+            public boolean callback(WinDef.HWND hWnd, Pointer userData) {
+                if (finder.test(hWnd)) { // 如果当前子窗口满足finder条件
+                    found.add(hWnd); // 将其句柄添加到结果列表中
+                }
+                return true; // 继续枚举下一个子窗口
             }
-            r.width = (int) Math.ceil(r.width * widthRatio);
-        }
-        if (screenSize.height != realSize.height) {
-            double heightRatio = realSize.height * 1d / screenSize.height;
-            if (!onlyWidthAndHeight) {
-                r.y = (int) Math.ceil(r.y * heightRatio);
-            }
-            r.height = (int) Math.ceil(r.height * heightRatio);
-        }
-        return r;
+        }, Pointer.NULL);
+
+        return found; // 返回找到的所有子窗口的句柄列表
+    }
+
+    /**
+     * 获取指定窗口的类名。
+     * @param hWnd 指定窗口的句柄。
+     * @return 窗口的类名字符串。
+     */
+    public static String getClassName(WinDef.HWND hWnd) {
+        // 创建一个足够大的字符数组来存储类名
+        char[] className = new char[512];
+        // 调用Windows API的GetClassName函数，获取窗口的类名
+        User32.INSTANCE.GetClassName(hWnd, className, className.length);
+        // 将字符数组转换为Java字符串并返回
+        return Native.toString(className);
     }
 
     public static void main(String[] args) {
-
         List<WinDef.HWND> windows = findWindows(hwd -> {
             Optional<File> file = getFile(hwd);
             if (!file.isPresent()) {
@@ -630,7 +594,10 @@ public class JnaWindowsUtils {
             return null;
         });
         if (!windows.isEmpty()) {
-            bringWindowToFront(windows.get(0));
+//            bringWindowToFront(windows.get(0));
+            System.out.println(
+                    getClientRect(windows.get(0))
+            );
         } else {
             System.err.println("没找到");
         }
