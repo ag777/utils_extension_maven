@@ -24,7 +24,7 @@ import java.util.function.Predicate;
  * 窗口句柄相关工具类
  * 对jna以及jna-platform的二次封装
  * @author ag777＜ag777@vip.qq.com＞
- * @version 2024/4/09 15:35
+ * @version 2024/4/16 17:36
  */
 public class JnaWindowsUtils {
     /**
@@ -549,6 +549,32 @@ public class JnaWindowsUtils {
      */
     public static boolean isForegroundWindow(WinDef.HWND hWnd) {
         return hWnd.equals(User32.INSTANCE.GetForegroundWindow());
+    }
+
+    /**
+     * 根据指定的窗口句柄（hwnd），获取与该窗口相交的屏幕设备。
+     *
+     * @param hwnd 指定窗口的句柄。
+     * @return 如果找到与窗口相交的屏幕设备，则返回该设备的Optional实例；如果没有找到，则返回空的Optional。
+     */
+    public static Optional<GraphicsDevice> getScreenDevice(WinDef.HWND hwnd) {
+        // 获取窗口的矩形区域
+        WinDef.RECT rect = JnaWindowsUtils.getWindowRect(hwnd);
+        // 根据窗口矩形的左上角和右下角坐标，创建窗口边界矩形
+        Rectangle windowBounds = new Rectangle(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+        // 获取当前图形环境
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        // 获取所有屏幕设备
+        GraphicsDevice[] devices = ge.getScreenDevices();
+        // 遍历屏幕设备，寻找与窗口边界相交的设备
+        for (GraphicsDevice device : devices) {
+            // 如果设备的默认配置边界与窗口边界相交，则返回该设备
+            if (device.getDefaultConfiguration().getBounds().intersects(windowBounds)) {
+                return Optional.of(device);
+            }
+        }
+        // 如果没有找到相交的设备，返回空的Optional
+        return Optional.empty();
     }
 
     /**
