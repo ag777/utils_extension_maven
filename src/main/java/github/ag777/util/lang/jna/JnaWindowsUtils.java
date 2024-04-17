@@ -24,7 +24,7 @@ import java.util.function.Predicate;
  * 窗口句柄相关工具类
  * 对jna以及jna-platform的二次封装
  * @author ag777＜ag777@vip.qq.com＞
- * @version 2024/4/16 17:36
+ * @version 2024/4/17 08:37
  */
 public class JnaWindowsUtils {
     /**
@@ -666,6 +666,66 @@ public class JnaWindowsUtils {
         User32.INSTANCE.GetClassName(hWnd, className, className.length);
         // 将字符数组转换为Java字符串并返回
         return Native.toString(className);
+    }
+
+    /**
+     * 捕获指定窗口的图像。（测试版，请在高版本jdk下执行）
+     * （需要保证有显示器且目标窗口在前台）
+     * @param window 指定要捕获图像的窗口的句柄（HWND）。
+     * @param robot 用于截取屏幕图像的Java Robot对象。
+     * @return BufferedImage 类型的图像，表示捕获到的窗口图像。
+     * @throws IllegalArgumentException 如果传入的窗口句柄无效，抛出此异常。
+     */
+    public static BufferedImage captureWindowToImage(WinDef.HWND window, Robot robot) throws IllegalArgumentException {
+        // 获取窗口在屏幕上的矩形区域，包括位置和大小
+        Rectangle rect = JnaWindowsUtils.getRectangle(window);
+        // 获取窗口显示的缩放比例，以处理高分屏下的图像捕获
+        double scale = getDisplayScale(window);
+        // 调整窗口矩形的大小，以适应屏幕的真实像素，解决因缩放导致的图像失真问题
+        trans(rect, 1/scale);
+        // 使用Robot类截取调整后窗口区域的屏幕图像
+        return robot.createScreenCapture(rect);
+    }
+
+    /**
+     * 对给定的矩形进行缩放转换。
+     * @param rect 指定的矩形对象。
+     * @param scale 缩放比例，正值表示放大，负值表示缩小。
+     * 注：该方法不会改变原矩形对象的引用，而是直接在原对象上修改属性值。
+     */
+    public static void trans(Rectangle rect, double scale) {
+        // 根据缩放比例计算新矩形的坐标和大小，并确保不会出现负值
+        rect.setRect(
+                rect.x < 0 ? 0 : rect.x * scale, // 对x坐标进行缩放，并保证不小于0
+                rect.y < 0 ? 0 : rect.y * scale, // 对y坐标进行缩放，并保证不小于0
+                rect.width * scale, // 对宽度进行缩放
+                rect.height * scale); // 对高度进行缩放
+    }
+
+
+    /**
+     * 获取指定窗口的显示缩放比例。
+     * 此函数通过比较窗口所在屏幕的宽度与系统屏幕宽度，计算出显示缩放比例。
+     *
+     * @param hwnd 指定窗口的句柄。
+     * @return 返回窗口所在屏幕的宽度与系统屏幕宽度的比例。
+     * @throws IllegalArgumentException 如果无法找到窗口所在的屏幕设备。
+     */
+    private static double getDisplayScale(WinDef.HWND hwnd) throws IllegalArgumentException {
+        // 尝试获取窗口对应的屏幕设备
+        Optional<GraphicsDevice> screenDevice = JnaWindowsUtils.getScreenDevice(hwnd);
+        if (!screenDevice.isPresent()) {
+            // 如果找不到对应的屏幕设备，抛出异常
+            throw new IllegalArgumentException("找不到窗口所在屏幕");
+        }
+
+        // 获取系统屏幕的宽度
+        double screenWith = Toolkit.getDefaultToolkit().getScreenSize().getWidth();
+        // 获取当前显示器的宽度
+        int displayWidth = screenDevice.get().getDisplayMode().getWidth();
+
+        // 计算并返回显示器宽度与屏幕宽度的比例
+        return displayWidth / screenWith;
     }
 
     public static void main(String[] args) {
