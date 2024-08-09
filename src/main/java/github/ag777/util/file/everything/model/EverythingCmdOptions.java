@@ -1,9 +1,9 @@
 package github.ag777.util.file.everything.model;
 
 /**
- * https://www.voidtools.com/zh-cn/support/everything/command_line_interface/
+ * <a href="https://www.voidtools.com/zh-cn/support/everything/command_line_interface/">命令行接口说明</a>
  * @author ag777 <837915770@vip.qq.com>
- * @Date 2022/11/22 10:23
+ * @version  2022/11/22 10:23
  */
 public class EverythingCmdOptions {
     public static final String INSTALL_SERVICE = "-install-service";

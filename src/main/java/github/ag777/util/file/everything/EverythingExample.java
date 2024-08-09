@@ -1,27 +1,26 @@
 package github.ag777.util.file.everything;
 
+import github.ag777.util.file.everything.model.EveryThingSearchOptions;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.FutureTask;
 
 /**
  * everything 调用示例
  * @author ag777 <837915770@vip.qq.com>
- * @Date 2022/11/21 15:39
+ * @version 2022/11/21 15:39
  */
 public class EverythingExample {
     public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
         String baseDir = "D:\\project\\idea\\test\\mixed\\src\\main\\resources\\everything\\";
         String exePath = baseDir+"Everything.exe";
         String dllPath = baseDir+"Everything64.dll";
-        EverythingUtil u = EverythingUtil.load(exePath, dllPath);
-        FutureTask<Void> task = u.startService();
-        System.out.println("启动中...");
-        task.get();
-        System.out.println("启动完成");
+        EverythingUtil u = EverythingUtil.load(new File(exePath), new File(dllPath));
+        u.startService();
         try {
-            List<String> list = u.search(".\\\\doc\\\\readme\\.md$", false, true);
+            List<String> list = u.search(".\\\\doc\\\\readme\\.md$", EveryThingSearchOptions.newInstance().setRegex());
             if (list.isEmpty()) {
                 System.err.println("没结果");
             }

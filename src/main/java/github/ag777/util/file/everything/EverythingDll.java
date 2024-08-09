@@ -7,91 +7,163 @@ import java.nio.Buffer;
 
 /**
  * everything 底层接口
- * 官方sdk文档: https://www.voidtools.com/zh-cn/support/everything/sdk/
+ * <a href="https://www.voidtools.com/zh-cn/support/everything/sdk/">官方sdk文档</a>
  * @author ag777 <837915770@vip.qq.com>
- * @Date 2022/10/8 17:23
+ * @version 2022/10/8 17:23
  */
 public interface EverythingDll extends Library {
-    int EVERYTHING_OK = 0;
-    int EVERYTHING_ERROR_MEMORY = 1;
-    int EVERYTHING_ERROR_IPC = 2;
-    int EVERYTHING_ERROR_REGISTERCLASSEX = 3;
-    int EVERYTHING_ERROR_CREATEWINDOW = 4;
-    int EVERYTHING_ERROR_CREATETHREAD = 5;
-    int EVERYTHING_ERROR_INVALIDINDEX = 6;
-    int EVERYTHING_ERROR_INVALIDCALL = 7;
 
-    int Everything_SetSearchW(WString lpSearchString);
+  /**
+   * 设置Everything的搜索字符串。
+   * @param lpSearchString 要设置的搜索字符串，使用宽字符格式。
+   * @return 如果设置成功返回EVERYTHING_OK，否则返回相应的错误代码。
+   */
+  int Everything_SetSearchW(WString lpSearchString);
 
-    void Everything_SetMatchPath(boolean bEnable);
+  /**
+   * 设置是否启用路径匹配搜索。
+   * @param bEnable 如果为true，则启用路径匹配搜索；如果为false，则禁用。
+   */
+  void Everything_SetMatchPath(boolean bEnable);
 
-    void Everything_SetMatchCase(boolean bEnable);
+  /**
+   * 设置是否启用大小写敏感搜索。
+   * @param bEnable 如果为true，则启用大小写敏感搜索；如果为false，则禁用。
+   */
+  void Everything_SetMatchCase(boolean bEnable);
 
-    void Everything_SetMatchWholeWord(boolean bEnable);
+  /**
+   * 设置是否启用全词匹配搜索。
+   * @param bEnable 如果为true，则启用全词匹配搜索；如果为false，则禁用。
+   */
+  void Everything_SetMatchWholeWord(boolean bEnable);
 
-   void Everything_SetRegex(boolean bEnable);
+  /**
+   * 设置是否启用正则表达式搜索。
+   * @param bEnable 如果为true，则启用正则表达式搜索；如果为false，则禁用。
+   */
+  void Everything_SetRegex(boolean bEnable);
 
-    void Everything_SetMax(int dwMax);
+  /**
+   * 设置搜索结果的最大数量。
+   * @param dwMax 要设置的最大结果数量。
+   */
+  void Everything_SetMax(int dwMax);
 
-    void Everything_SetOffset(int dwOffset);
+  /**
+   * 设置搜索结果的偏移量。
+   * @param dwOffset 要设置的结果偏移量。
+   */
+  void Everything_SetOffset(int dwOffset);
 
-    /**
-     * The Everything_SetReplyWindow function sets the window that will receive the the IPC Query results.
-     * <p>This function must be called before calling Everything_Query with bWait set to FALSE.
-     * Check for results with the specified window using Everything_IsQueryReply.
-     * Call Everything_SetReplyID with a unique identifier to specify multiple searches.
-     * @param hWnd The handle to the window that will receive the IPC Query reply.
-     */
+//    /**
+//     * The Everything_SetReplyWindow function sets the window that will receive the the IPC Query results.
+//     * <p>This function must be called before calling Everything_Query with bWait set to FALSE.
+//     * Check for results with the specified window using Everything_IsQueryReply.
+//     * Call Everything_SetReplyID with a unique identifier to specify multiple searches.
+//     * @param hWnd The handle to the window that will receive the IPC Query reply.
+//     */
 //    void Everything_SetReplyWindow(int hWnd);
 
-    /**
-     * The Everything_SetReplyID function sets the unique number to identify the next query.
-     * @param nId The unique number to identify the next query.
-     */
-    void Everything_SetReplyID(int nId);
+   /**
+    * The Everything_SetReplyID function sets the unique number to identify the next query.
+    * @param nId The unique number to identify the next query.
+    */
+   void Everything_SetReplyID(int nId);
 
-    /**
-     * The Everything_SetSort function sets how the results should be ordered.
-     * @param dwSortType The sort type, can be one of the values in EverythingSorts
-     */
-    void Everything_SetSort(int dwSortType);
+   /**
+    * The Everything_SetSort function sets how the results should be ordered.
+    * @param dwSortType The sort type, can be one of the values in EverythingSorts
+    */
+   void Everything_SetSort(int dwSortType);
 
-    /**
-     * The Everything_SetRequestFlags function sets the desired result data.
-     * <p>Make sure you include EVERYTHING_REQUEST_FILE_NAME and EVERYTHING_REQUEST_PATH if you want the result file name information returned.
-     * The default request flags are EVERYTHING_REQUEST_FILE_NAME | EVERYTHING_REQUEST_PATH (0x00000003).
-     * When the default flags (EVERYTHING_REQUEST_FILE_NAME | EVERYTHING_REQUEST_PATH) are used the SDK will use the old version 1 query.
-     * When any other flags are used the new version 2 query will be tried first, and then fall back to version 1 query.
-     * It is possible the requested data is not available, in which case after you have received your results you should call Everything_GetResultListRequestFlags to determine the available result data.
-     * This function must be called before Everything_Query.
-     * @param dwRequestFlags he request flags, can be zero or more of the flags in DwRequestFlags:
-     */
-    void Everything_SetRequestFlags(int dwRequestFlags);
+   /**
+    * The Everything_SetRequestFlags function sets the desired result data.
+    * <p>Make sure you include EVERYTHING_REQUEST_FILE_NAME and EVERYTHING_REQUEST_PATH if you want the result file name information returned.
+    * The default request flags are EVERYTHING_REQUEST_FILE_NAME | EVERYTHING_REQUEST_PATH (0x00000003).
+    * When the default flags (EVERYTHING_REQUEST_FILE_NAME | EVERYTHING_REQUEST_PATH) are used the SDK will use the old version 1 query.
+    * When any other flags are used the new version 2 query will be tried first, and then fall back to version 1 query.
+    * It is possible the requested data is not available, in which case after you have received your results you should call Everything_GetResultListRequestFlags to determine the available result data.
+    * This function must be called before Everything_Query.
+    * @param dwRequestFlags he request flags, can be zero or more of the flags in DwRequestFlags:
+    */
+   void Everything_SetRequestFlags(int dwRequestFlags);
 
 //    boolean EVERYTHINGAPI Everything_IsQueryReply(UINT message, WPARAM wParam,LPARAM lParam, DWORD nI);
 
-    /**
-     * The Everything_GetNumFileResults function returns the number of visible file results.
-     * @return Returns the number of visible file results.
-     * If the function fails the return value is 0. To get extended error information, call Everything_GetLastError.
-     */
-    int Everything_GetNumFileResults();
+   /**
+    * The Everything_GetNumFileResults function returns the number of visible file results.
+    * @return Returns the number of visible file results.
+    * If the function fails the return value is 0. To get extended error information, call Everything_GetLastError.
+    */
+   int Everything_GetNumFileResults();
 
-    int Everything_GetNumFolderResults();
+  /**
+   * 获取文件夹结果的数量。
+   * 此函数返回Everything搜索结果中文件夹的数量。
+   *
+   * @return 返回文件夹结果的数量，如果发生错误则返回-1。
+   */
+  int Everything_GetNumFolderResults();
 
-    int Everything_GetNumResults();
+  /**
+   * 获取结果的总数。
+   * 此函数返回Everything搜索结果中的总条目数，包括文件和文件夹。
+   *
+   * @return 返回结果的总数，如果发生错误则返回-1。
+   */
+  int Everything_GetNumResults();
 
-    int Everything_GetTotFileResults();
+  /**
+   * 获取文件结果的总数。
+   * 此函数返回Everything搜索结果中文件的数量。
+   *
+   * @return 返回文件结果的数量，如果发生错误则返回-1。
+   */
+  int Everything_GetTotFileResults();
 
-    int Everything_GetTotFolderResults();
+  /**
+   * 获取文件夹结果的总数。
+   * 此函数返回Everything搜索结果中文件夹的总数。
+   *
+   * @return 返回文件夹结果的总数，如果发生错误则返回-1。
+   */
+  int Everything_GetTotFolderResults();
 
-    int Everything_GetTotResults();
+  /**
+   * 获取总结果的数量。
+   * 此函数返回Everything搜索结果中的总条目数，包括文件和文件夹。
+   *
+   * @return 返回总结果的数量，如果发生错误则返回-1。
+   */
+  int Everything_GetTotResults();
 
-    boolean Everything_IsVolumeResult(int nIndex);
+  /**
+   * 检查指定索引是否为卷结果。
+   * 此函数用于判断搜索结果列表中指定索引的条目是否是一个卷。
+   *
+   * @param nIndex 要检查的索引值。
+   * @return 如果是卷结果则返回true，否则返回false。
+   */
+  boolean Everything_IsVolumeResult(int nIndex);
 
-    boolean Everything_IsFolderResult(int nIndex);
+  /**
+   * 检查指定索引是否为文件夹结果。
+   * 此函数用于判断搜索结果列表中指定索引的条目是否是一个文件夹。
+   *
+   * @param nIndex 要检查的索引值。
+   * @return 如果是文件夹结果则返回true，否则返回false。
+   */
+  boolean Everything_IsFolderResult(int nIndex);
 
-    boolean Everything_IsFileResult(int nIndex);
+  /**
+   * 检查指定索引是否为文件结果。
+   * 此函数用于判断搜索结果列表中指定索引的条目是否是一个文件。
+   *
+   * @param nIndex 要检查的索引值。
+   * @return 如果是文件结果则返回true，否则返回false。
+   */
+  boolean Everything_IsFileResult(int nIndex);
 
 //    LPCTSTR Everything_GetResultFileName(int index);
 

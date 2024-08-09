@@ -1,136 +1,125 @@
 package github.ag777.util.file.everything;
 
-import com.ag777.util.lang.StringUtils;
-import com.sun.jna.Native;
 import com.sun.jna.WString;
-import github.ag777.util.file.everything.model.EverythingCmdOptions;
+import github.ag777.util.file.everything.model.EveryThingSearchOptions;
+import lombok.Getter;
 
+import java.io.File;
 import java.io.IOException;
-import java.nio.CharBuffer;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Future;
 
 /**
  * everything调用工具(windows系统)
- * 这里下载本体和sdk: https://www.voidtools.com/zh-cn/downloads/
+ * <a href="https://www.voidtools.com/zh-cn/downloads/">这里下载本体和sdk</a>
  *
  * @author ag777 <837915770@vip.qq.com>
- * @Date 2022/11/21 15:18
+ * @version 2024/08/09 17:04
  */
 public class EverythingUtil {
-    private String exePath;
-    private EverythingDll dll;
+    private final File exeFile;
+    @Getter
+    private final EverythingDll dll;
 
-    private EverythingUtil(String exePath, EverythingDll dll) {
-        this.exePath = exePath;
+    public EverythingUtil(File exeFile, EverythingDll dll) {
+        this.exeFile = exeFile;
         this.dll = dll;
     }
 
-    public EverythingDll getDll() {
-        return dll;
+    /**
+     * 加载Everything工具类实例
+     *
+     * 此方法首先检查指定的可执行文件和动态链接库文件是否存在，如果文件不存在，则抛出IllegalArgumentException
+     * 如果文件存在，方法将加载动态链接库，并使用可执行文件和动态链接库创建Everything工具类实例
+     *
+     * @param exeFile Everything可执行文件的路径
+     * @param dllFile Everything动态链接库文件的路径
+     * @return 返回一个EverythingUtil实例，用于操作Everything
+     * @throws IllegalArgumentException 如果可执行文件或动态链接库文件不存在，则抛出此异常
+     */
+    public static EverythingUtil load(File exeFile, File dllFile) throws IllegalArgumentException {
+        // 检查可执行文件是否存在
+        if (!exeFile.exists() || !exeFile.isFile()) {
+            throw new IllegalArgumentException("Everything.exe not found: "+exeFile.getAbsolutePath());
+        }
+        // 检查动态链接库文件是否存在
+        if (!dllFile.exists() || !dllFile.isFile()) {
+            throw new IllegalArgumentException("Everything64.dll not found: "+dllFile.getAbsolutePath());
+        }
+        // 加载动态链接库
+        EverythingDll dll = EverythingUtils.loadDll(dllFile);
+        // 创建并返回Everything工具类实例
+        return new EverythingUtil(exeFile, dll);
     }
+
 
     /**
-     * 加载dll,初始化工具类
-     * @param exePath everything.exe文件的路径
-     * @param dllPath everything.dll的路径
-     * @return 工具类
+     * 安装服务
+     *
+     * @throws IOException 如果在与外部服务交互过程中出现输入输出异常
+     * @throws InterruptedException 如果线程在等待外部服务响应时被中断
      */
-    public static EverythingUtil load(String exePath, String dllPath) {
-        // jni实例化接口对象
-        EverythingDll dll = Native.load(dllPath, EverythingDll.class);
-        return new EverythingUtil(exePath, dll);
-    }
-
     public void installService() throws IOException, InterruptedException {
-        execByExe(EverythingCmdOptions.INSTALL_SERVICE, true);
+        EverythingUtils.installService(exeFile);
     }
 
+    /**
+     * 卸载服务
+     *
+     * @throws IOException 如果在与外部服务交互过程中出现输入输出异常
+     * @throws InterruptedException 如果线程在等待外部服务响应时被中断
+     */
     public void uninstallService() throws IOException, InterruptedException {
-        execByExe(EverythingCmdOptions.UNINSTALL_SERVICE, true);
+        EverythingUtils.uninstallService(exeFile);
     }
 
     /**
-     * 启动服务
-     * @return 等待服务启动完成的异步任务
-     * @throws IOException 调用命令行异常
-     * @throws InterruptedException 中断
+     * 启动服务异步操作
+     *
+     * @return 代表异步操作的Future对象
+     * @throws IOException 如果在与外部服务交互过程中出现输入输出异常
+     * @throws InterruptedException 如果线程在等待外部服务响应时被中断
      */
-    public FutureTask<Void> startService() throws IOException, InterruptedException {
-        execByExe(EverythingCmdOptions.START_SERVICE, true);
-        execByExe(EverythingCmdOptions.STARTUP, false);
-        FutureTask<Void> task = new FutureTask<>(() -> {
-            while (!dll.Everything_IsDBLoaded()) {
-                TimeUnit.MILLISECONDS.sleep(100);
-            }
-            return null;
-        });
-        new Thread(task).start();
-        return task;
+    public Future<Void> startService() throws IOException, InterruptedException {
+        return EverythingUtils.startService(dll, exeFile);
     }
 
     /**
-     * 关闭服务
-     * @throws IOException 调用命令行异常
-     * @throws InterruptedException 中断
+     * 关闭服务管理资源，如打开的文件或网络连接
      */
-    public void closeService() throws IOException, InterruptedException {
-//        execByExe("-exit", true);
-        dll.Everything_Exit();
-    }
-
-    private void execByExe(String options, boolean waitFor) throws IOException, InterruptedException {
-        execByExe(options, null, waitFor);
+    public void closeService() {
+        EverythingUtils.closeService(dll);
     }
 
     /**
-     * 调用命令行接口
-     * @param options 方法
-     * @param searchText 参数
-     * @throws IOException 调用命令行异常
-     * @throws InterruptedException 中断
+     * 使用给定的关键字和选项进行搜索
+     *
+     * @param keyword 要搜索的关键字
+     * @param options 搜索选项，用于定制搜索行为
+     * @return 返回匹配文件的路径列表
      */
-    private void execByExe(String options, String searchText, boolean waitFor) throws IOException, InterruptedException {
-        StringBuilder cmd = new StringBuilder(exePath)
-                .append(' ').append(options);
-        if (!StringUtils.isEmpty(searchText)) {
-            cmd.append(' ').append(searchText);
-        }
-        Process exec = Runtime.getRuntime().exec(cmd.toString());
-        if (waitFor) {
-            exec.waitFor();
-        }
-    }
-
-    /**
-     * 搜索文件
-     * @param fileName 文件名
-     * @param caseSensitive 是否忽略大小写
-     * @param regex 是否是正则表达式
-     * @return 搜索结果列表
-     */
-    public List<String> search(String fileName, boolean caseSensitive, boolean regex) {
-        LinkedList<String> result = new LinkedList<>();
-        // 只扫描文件
-//        String format = "file: \""+fileName+"\"";
-        dll.Everything_SetMatchCase(caseSensitive);
-        dll.Everything_SetRegex(regex);
-        dll.Everything_SetSearchW(new WString(fileName));
+    public List<String> search(String keyword, EveryThingSearchOptions options) {
+        // 根据选项设置是否匹配路径
+        dll.Everything_SetMatchPath(options.isMatchPath());
+        // 根据选项设置是否区分大小写
+        dll.Everything_SetMatchCase(options.isMatchCase());
+        // 根据选项设置是否全字匹配
+        dll.Everything_SetMatchWholeWord(options.isMatchWholeWord());
+        // 根据选项设置是否使用正则表达式
+        dll.Everything_SetRegex(options.isUseRegex());
+        // 设置最大返回数量
+        dll.Everything_SetMax(options.getMax());
+        // 设置偏移量，用于分页
+        dll.Everything_SetOffset(options.getOffset());
+        // 设置排序方式
+        dll.Everything_SetSort(options.getSort());
+        // 设置请求标志
+        dll.Everything_SetRequestFlags(options.getRequestFlags());
+        // 设置搜索关键字
+        dll.Everything_SetSearchW(new WString(keyword));
+        // 执行搜索并等待返回结果
         dll.Everything_QueryW(true);
-        int num = dll.Everything_GetNumResults();
-//        System.out.println(fileName+" find file "+num);
-        CharBuffer p = CharBuffer.allocate(1024);
-        char[] a = new char[1024];
-        for (int i = 0; i < num; i++) {
-            dll.Everything_GetResultFullPathNameW(i, p, 1024);
-            String s = p.toString().replace("\0", "");
-            result.add(s);
-            // 清空buffer数据
-            p.put(a, 0, 1024);
-            p.clear();
-        }
-        return result;
+        // 使用EverythingUtils工具类处理搜索结果
+        return EverythingUtils.search(dll);
     }
 }

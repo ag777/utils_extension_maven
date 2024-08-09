@@ -1,13 +1,15 @@
 package github.ag777.util.file.everything.model;
 
 /**
+ * dwRequestFlags 枚举
  * @author ag777 <837915770@vip.qq.com>
- * @Description dwRequestFlags 枚举
- * @Date 2022/11/22 16:44
+ * @version 2024/8/9 下午3:55
  */
 public class DwRequestFlags {
     public static final int EVERYTHING_REQUEST_FILE_NAME=0x00000001;
     public static final int EVERYTHING_REQUEST_PATH=0x00000002;
+    /** EVERYTHING_REQUEST_FILE_NAME | EVERYTHING_REQUEST_PATH */
+    public static final int EVERYTHING_DEFAULT=0x00000003;
     public static final int EVERYTHING_REQUEST_FULL_PATH_AND_FILE_NAME=0x00000004;
     public static final int EVERYTHING_REQUEST_EXTENSION=0x00000008;
     public static final int EVERYTHING_REQUEST_SIZE=0x00000010;

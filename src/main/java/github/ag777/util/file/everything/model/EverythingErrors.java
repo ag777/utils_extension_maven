@@ -2,9 +2,9 @@ package github.ag777.util.file.everything.model;
 
 /**
  * everything 错误枚举
- * https://www.voidtools.com/zh-cn/support/everything/sdk/everything_getlasterror/
+ * <a href="https://www.voidtools.com/zh-cn/support/everything/sdk/everything_getlasterror/">错误枚举</a>
  * @author ag777 <837915770@vip.qq.com>
- * @Date 2022/11/22 9:33
+ * @version 2022/11/22 9:33
  */
 public class EverythingErrors {
     // The operation completed successfully

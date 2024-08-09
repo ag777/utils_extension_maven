@@ -2,9 +2,9 @@ package github.ag777.util.file.everything.model;
 
 /**
  * 排序枚举
- * https://www.voidtools.com/zh-cn/support/everything/sdk/everything_setsort/
+ * <a href="https://www.voidtools.com/zh-cn/support/everything/sdk/everything_setsort/">排序枚举</a>
  * @author ag777 <837915770@vip.qq.com>
- * @Date 2022/11/22 9:19
+ * @version  2022/11/22 9:19
  */
 public class EverythingSorts {
     public static final int EVERYTHING_SORT_NAME_ASCENDING=1;
