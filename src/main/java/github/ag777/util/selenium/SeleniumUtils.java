@@ -6,6 +6,8 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.ie.InternetExplorerDriver;
+import org.openqa.selenium.ie.InternetExplorerOptions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
@@ -13,14 +15,16 @@ import java.util.List;
 import java.util.function.Function;
 
 /**
- * chrome: http://npm.taobao.org/mirrors/chromedriver/
+ * 对selenium的二次封装
+ * chrome: <a href="http://npm.taobao.org/mirrors/chromedriver/">chrome</a>
+ * <a href="https://selenium-release.storage.googleapis.com/index.html">ie</a>
  * @author ag777 <837915770@vip.qq.com>
- * @Description 对selenium的二次封装
- * @Date 2021/10/12 16:50
+ * @version  2024/09/24 10:49
  */
 public class SeleniumUtils {
 
-    private static final String PROPERTY_KEY_DRIVER = "webdriver.chrome.driver";
+    private static final String PROPERTY_KEY_CHROME_DRIVER = "webdriver.chrome.driver";
+    private static final String PROPERTY_KEY_IE_DRIVER = "webdriver.ie.driver";
 
     public SeleniumUtils() {}
 
@@ -35,14 +39,53 @@ public class SeleniumUtils {
     }
 
     /**
+     * 获取ie浏览器驱动
      *
+     * @param driverPath         IEDriverServer.exe路径
+     * @param options            配置
+     * @param globalTimeoutMills 全局超时时间
+     * @return 谷歌浏览器驱动
+     */
+    public static WebDriver getIeDriver(String driverPath, InternetExplorerOptions options, Integer globalTimeoutMills) {
+        System.setProperty(PROPERTY_KEY_IE_DRIVER, driverPath);
+        WebDriver driver;
+        if (options != null) {
+            driver = new InternetExplorerDriver(options);
+        } else {
+            driver = new InternetExplorerDriver();
+        }
+
+        // 设置全局超时
+        setGlobalTimeout(driver, globalTimeoutMills);
+        return driver;
+    }
+
+    /**
+     *
+     * @return ie配置举例
+     */
+    public InternetExplorerOptions getExampleIeOptions() {
+        InternetExplorerOptions options = new InternetExplorerOptions();
+        options.ignoreZoomSettings(); // 忽略缩放设置
+        options.destructivelyEnsureCleanSession(); // 每次启动时清除缓存和 cookies
+        options.requireWindowFocus(); // 启动时获得焦点
+        options.enablePersistentHovering(); // 启用持久悬停
+        // 忽略安全区域设置
+        options.setCapability(InternetExplorerDriver.INTRODUCE_FLAKINESS_BY_IGNORING_SECURITY_DOMAINS, true);
+        // 忽略缩放设置
+        options.setCapability(InternetExplorerDriver.IGNORE_ZOOM_SETTING, true);
+        return options;
+    }
+
+    /**
+     * 获取chrome浏览器驱动
      * @param driverPath chromedriver.exe路径
      * @param options 配置
      * @param globalTimeoutMills 全局超时时间
      * @return 谷歌浏览器驱动
      */
     public static WebDriver getChromeDriver(String driverPath, ChromeOptions options, Integer globalTimeoutMills) {
-        System.setProperty(PROPERTY_KEY_DRIVER,
+        System.setProperty(PROPERTY_KEY_CHROME_DRIVER,
                 driverPath);
         ChromeDriver driver = null;
         if (options != null) {
@@ -55,7 +98,6 @@ public class SeleniumUtils {
 //        maximize(driver);
         // 设置全局超时
         setGlobalTimeout(driver, globalTimeoutMills);
-
         return driver;
     }
 
