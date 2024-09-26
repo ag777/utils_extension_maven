@@ -1,4 +1,4 @@
-package github.ag777.util.remote.ollama.model;
+package github.ag777.util.remote.ollama.okhttp.model;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

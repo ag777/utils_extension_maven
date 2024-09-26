@@ -1,12 +1,12 @@
-package github.ag777.util.remote.ollama;
+package github.ag777.util.remote.ollama.okhttp;
 
 import com.ag777.util.gson.GsonUtils;
 import com.ag777.util.http.HttpHelper;
 import com.ag777.util.http.HttpUtils;
 import com.ag777.util.http.model.MyCall;
 import com.ag777.util.lang.exception.model.ValidateException;
-import github.ag777.util.remote.ollama.model.OllamaRequestChat;
-import github.ag777.util.remote.ollama.model.OllamaResponseChat;
+import github.ag777.util.remote.ollama.okhttp.model.OllamaRequestChat;
+import github.ag777.util.remote.ollama.okhttp.model.OllamaResponseChat;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import okhttp3.Response;
@@ -25,7 +25,6 @@ import java.util.function.Consumer;
  * @version 2024/2/17 23:42
  */
 public class OllamaChatHelper {
-    public static final String MODEL_NAME_QWEN_7B = "qwen:7b";
     @Setter
     private String host = "localhost";
     @Setter
@@ -42,9 +41,10 @@ public class OllamaChatHelper {
     @SneakyThrows
     public static void main(String[] args) {
         OllamaChatHelper helper = new OllamaChatHelper(new HttpHelper(HttpUtils.defaultBuilder().readTimeout(5, TimeUnit.MINUTES).build(), null));
+        helper.setHost("35.9.14.25");
         helper.post(
                 new OllamaRequestChat()
-                        .setModel(MODEL_NAME_QWEN_7B)
+                        .setModel("llama3:8b")
                         .addMessage(
                                 OllamaRequestChat.MessagesDTO.ROLE_USER,
                                 "计算1+1"
