@@ -118,11 +118,11 @@ public class OllamaChatHelper {
      * @param onMessage 消息回调消费函数，用于处理接收到的每条消息。
      * @return CompletableFuture<String> 异步完成的未来对象，包含累计的回复内容。
      */
-    public CompletableFuture<String> chatAsync(String modelName, Map<String, Object> options, String message, onMessage onMessage) {
+    public CompletableFuture<String> chatAsync(String modelName, Map<String, Object> options, String message, OllamaUtils.OnMessage onMessage) {
         return chatAsync(modelName, options, defaultTools, message, onMessage);
     }
 
-    public CompletableFuture<String> chatAsync(String modelName, Map<String, Object> options, List<OllamaApi.ChatRequest.Tool> tools, String message, onMessage onMessage) {
+    public CompletableFuture<String> chatAsync(String modelName, Map<String, Object> options, List<OllamaApi.ChatRequest.Tool> tools, String message, OllamaUtils.OnMessage onMessage) {
         // 添加发送的消息到消息列表
         addAsk2Message(message);
         CompletableFuture<String> future =OllamaUtils.chatAsync(api, modelName, options, tools, messages, onMessage, repeatThresholdLength);
@@ -158,16 +158,11 @@ public class OllamaChatHelper {
         messages.add(OllamaUtils.assistantMessage(reply));
     }
 
-
     private void removeLast() {
         if (!messages.isEmpty()) {
             messages.removeLast();
         }
     }
 
-    @FunctionalInterface
-    public interface onMessage {
-        void accept(String message, StringBuilder allReply) throws Throwable;
-    }
 
 }

@@ -60,15 +60,15 @@ public class OllamaUtils {
      * @param onMessage 消息回调消费函数，用于处理接收到的每条消息。
      * @return CompletableFuture<String> 异步完成的未来对象，包含累计的回复内容。
      */
-    public static CompletableFuture<String> chatAsync(OllamaApi api, String modelName, Map<String, Object> options, List<OllamaApi.Message> messages, OllamaChatHelper.onMessage onMessage) {
+    public static CompletableFuture<String> chatAsync(OllamaApi api, String modelName, Map<String, Object> options, List<OllamaApi.Message> messages, OnMessage onMessage) {
         return chatAsync(api, modelName, options, null, messages, onMessage);
     }
 
-    public static CompletableFuture<String> chatAsync(OllamaApi api, String modelName, Map<String, Object> options, List<OllamaApi.ChatRequest.Tool> tools, List<OllamaApi.Message> messages, OllamaChatHelper.onMessage onMessage) {
+    public static CompletableFuture<String> chatAsync(OllamaApi api, String modelName, Map<String, Object> options, List<OllamaApi.ChatRequest.Tool> tools, List<OllamaApi.Message> messages, OnMessage onMessage) {
         return chatAsync(api, modelName, options, tools, messages, onMessage, repeatThresholdLength);
     }
 
-    public static CompletableFuture<String> chatAsync(OllamaApi api, String modelName, Map<String, Object> options, List<OllamaApi.ChatRequest.Tool> tools, List<OllamaApi.Message> messages, OllamaChatHelper.onMessage onMessage, int repeatThresholdLength) {
+    public static CompletableFuture<String> chatAsync(OllamaApi api, String modelName, Map<String, Object> options, List<OllamaApi.ChatRequest.Tool> tools, List<OllamaApi.Message> messages, OnMessage onMessage, int repeatThresholdLength) {
         // 创建一个CompletableFuture，并注册完成时的处理逻辑
         CompletableFuture<String> future = new CompletableFuture<>();
         // 用于累积回复内容
@@ -175,7 +175,7 @@ public class OllamaUtils {
     }
 
     @FunctionalInterface
-    public interface onMessage {
+    public interface OnMessage {
         void accept(String message, StringBuilder allReply) throws Throwable;
     }
 }
