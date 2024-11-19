@@ -1,13 +1,9 @@
 package github.ag777.util.remote.ollama.spring.ai;
 
 import com.ag777.util.lang.exception.model.ValidateException;
-import github.ag777.util.remote.ollama.spring.ai.model.AIModelReplyDeadLoopException;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.ai.ollama.api.OllamaApi;
-import org.springframework.ai.ollama.api.OllamaModel;
-import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,7 +13,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * @author ag777 <837915770@vip.qq.com>
- * @version 2024/4/29 下午3:26
+ * @version 2024/11/19 下午5:38
  */
 public class OllamaChatHelper {
     @Getter
@@ -101,11 +97,9 @@ public class OllamaChatHelper {
 
     public String chat(String modelName, Map<String, Object> options, List<OllamaApi.ChatRequest.Tool> tools, String message) throws ValidateException {
         addAsk2Message(message); // 添加发送的消息到消息列表
-        OllamaApi.ChatRequest request = getRequest(modelName, messages, options, tools, false); // 构建聊天请求
 
         try {
-            OllamaApi.ChatResponse response = api.chat(request); // 发送请求并获取回复
-            String reply = response.message().content(); // 提取回复内容
+            String reply = OllamaUtils.chat(api, modelName, options, tools, messages);; // 提取回复内容
             addReply2Message(reply); // 添加回复到消息列表
             return reply; // 返回回复内容
         } catch (Exception e) {
@@ -131,9 +125,7 @@ public class OllamaChatHelper {
     public CompletableFuture<String> chatAsync(String modelName, Map<String, Object> options, List<OllamaApi.ChatRequest.Tool> tools, String message, onMessage onMessage) {
         // 添加发送的消息到消息列表
         addAsk2Message(message);
-
-        // 创建一个CompletableFuture，并注册完成时的处理逻辑
-        CompletableFuture<String> future = new CompletableFuture<>();
+        CompletableFuture<String> future =OllamaUtils.chatAsync(api, modelName, options, tools, messages, onMessage, repeatThresholdLength);
         future.whenComplete((reply, throwable) -> {
             // 如果Future被取消或有异常发生，则移除最后添加的消息
             if (future.isCancelled() || throwable != null) {
@@ -143,95 +135,11 @@ public class OllamaChatHelper {
             }
         });
 
-        // 用于累积回复内容
-        StringBuilder result = new StringBuilder();
-        // 构建聊天请求
-        OllamaApi.ChatRequest request = getRequest(modelName, messages, options, tools, true);
-
-        // 发送异步聊天请求并订阅响应
-        Flux<OllamaApi.ChatResponse> response = api.streamingChat(request)
-                .onErrorStop() // 错误时停止订阅
-                .handle((data, sink) -> {
-                    // 如果Future被取消，向sink发送错误并终止处理
-                    if (future.isCancelled()) {
-                        sink.error(new InterruptedException("请求中断"));
-                        return;
-                    }
-                    // 异常
-                    if (future.isCompletedExceptionally()) {
-                        sink.error(future.exceptionNow());
-                        return;
-                    }
-                    // 死循环判断
-                    if (repeatThresholdLength>0) {
-                        try {
-                            AIModelReplyDeadLoopChecker.test(result, repeatThresholdLength);
-                        } catch (AIModelReplyDeadLoopException e) {
-                            sink.error(e);
-                            return;
-                        }
-                    }
-                    // 否则将数据发送给下一个处理程序
-                    sink.next(data);
-                });
-
-        // 订阅响应流，处理每条响应
-        response.subscribe(r -> {
-            // 如果存在有效消息，调用回调函数处理，并累积回复内容
-            if (r.message() != null) {
-                try {
-                    result.append(r.message().content());
-                    if (onMessage != null) {
-                        onMessage.accept(r.message().content(), result);
-                    }
-
-                } catch (Throwable e) {
-                    future.completeExceptionally(e);
-                }
-            }
-            // 如果对话完成，完成Future
-            if (Boolean.TRUE.equals(r.done())) {
-                future.complete(result.toString());
-            }
-        }, e -> {
-            // 处理异常，如果是中断异常则取消Future，否则封装异常并完成Future
-            if (e instanceof InterruptedException) {
-                future.cancel(true);
-            } else {
-                future.completeExceptionally(e);
-            }
-        });
-
         // 返回创建的Future
         return future;
     }
 
-    /**
-     * 创建一个系统消息对象。
-     * @param message 消息的内容。
-     * @return 返回一个初始化为系统角色的消息对象。
-     */
-    public static OllamaApi.Message systemMessage(String message) {
-        return new OllamaApi.Message(OllamaApi.Message.Role.SYSTEM, message, null, null);
-    }
 
-    /**
-     * 创建一个用户消息对象。
-     * @param message 消息的内容。
-     * @return 返回一个初始化为用户角色的消息对象。
-     */
-    public static OllamaApi.Message userMessage(String message) {
-        return new OllamaApi.Message(OllamaApi.Message.Role.USER, message, null, null);
-    }
-
-    /**
-     * 创建一个助手消息对象。
-     * @param message 消息的内容。
-     * @return 返回一个初始化为助手角色的消息对象。
-     */
-    public static OllamaApi.Message assistantMessage(String message) {
-        return new OllamaApi.Message(OllamaApi.Message.Role.ASSISTANT, message, null, null);
-    }
 
 
     /**
@@ -239,7 +147,7 @@ public class OllamaChatHelper {
      * @param ask 表示用户提出的询问内容。
      */
     private void addAsk2Message(String ask) {
-        messages.add(userMessage(ask));
+        messages.add(OllamaUtils.userMessage(ask));
     }
 
     /**
@@ -247,21 +155,9 @@ public class OllamaChatHelper {
      * @param reply 表示助手给出的回复内容。
      */
     private void addReply2Message(String reply) {
-        messages.add(assistantMessage(reply));
+        messages.add(OllamaUtils.assistantMessage(reply));
     }
 
-    public static OllamaApi.ChatRequest getRequest(String modelName, List<OllamaApi.Message> messages, Map<String, Object> options, List<OllamaApi.ChatRequest.Tool> tools, boolean isStream) {
-        return OllamaApi.ChatRequest.builder(ObjectUtils.defaultIfNull(modelName, OllamaModel.MISTRAL.id()))
-                // 设置流式传输模式为开启
-                .withStream(isStream) // streaming
-                // 添加用户消息到消息列表，内容询问保加利亚的首都、国家大小及国歌
-                .withMessages(messages)
-                .withTools(tools)
-                // 设置模型运行选项，例如温度设为0.9
-                .withOptions(options)
-                // 构建最终的ChatRequest对象
-                .build();
-    }
 
     private void removeLast() {
         if (!messages.isEmpty()) {
