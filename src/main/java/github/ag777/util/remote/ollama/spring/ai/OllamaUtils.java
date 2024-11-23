@@ -44,8 +44,8 @@ public class OllamaUtils {
 
         try {
             OllamaApi.ChatResponse response = api.chat(request); // 发送请求并获取回复
-            // 提取回复内容
-            return response.message().content(); // 返回回复内容
+            String reply = response.message().content(); // 提取回复内容
+            return reply; // 返回回复内容
         } catch (Exception e) {
             throw new ValidateException(e.getMessage(), e); // 将异常封装并抛出
         }
