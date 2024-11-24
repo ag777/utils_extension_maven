@@ -1,12 +1,12 @@
 package github.ag777.util.remote.ollama.okhttp.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author ag777＜ag777@vip.qq.com＞
@@ -18,27 +18,16 @@ import java.util.List;
 public class OllamaRequestChat {
 
     private String model;
-    private List<MessagesDTO> messages;
+    private List<MessageDTO> messages;
+    private Map<String, Object> options;
     private Boolean stream;
 
     public OllamaRequestChat addMessage(String role, String content) {
         if (messages == null) {
             messages = new ArrayList<>(1);
         }
-        messages.add(new MessagesDTO(role, content));
+        messages.add(new MessageDTO(role, content));
         return this;
     }
 
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Data
-    @Accessors(chain = true)
-    public static class MessagesDTO {
-        public static final String ROLE_SYSTEM = "system";
-        public static final String ROLE_USER = "user";
-        public static final String ROLE_ASSISTANT = "assistant";
-
-        private String role;
-        private String content;
-    }
 }

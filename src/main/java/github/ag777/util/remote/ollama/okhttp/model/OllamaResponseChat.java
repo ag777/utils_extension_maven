@@ -17,10 +17,4 @@ public class OllamaResponseChat {
     private MessageDTO message;
     private Boolean done;
 
-    @NoArgsConstructor
-    @Data
-    public static class MessageDTO {
-        private String role;
-        private String content;
-    }
 }
