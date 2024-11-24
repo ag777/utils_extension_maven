@@ -26,7 +26,7 @@ import java.util.Map;
 public class XmlUtils {
 	
 	public static Document load(String filePath) throws IOException {
-		String content = FileUtils.readText(filePath, SystemUtils.lineSeparator());
+		String content = FileUtils.readText(filePath);
 		return Jsoup.parse(content);
 	}
 	
