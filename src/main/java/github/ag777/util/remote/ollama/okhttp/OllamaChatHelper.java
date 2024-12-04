@@ -1,146 +1,115 @@
 package github.ag777.util.remote.ollama.okhttp;
 
-import com.ag777.util.gson.GsonUtils;
-import com.ag777.util.http.HttpHelper;
-import com.ag777.util.http.HttpUtils;
-import com.ag777.util.http.model.MyCall;
-import com.ag777.util.lang.IOUtils;
 import com.ag777.util.lang.exception.model.ValidateException;
-import github.ag777.util.remote.ollama.okhttp.model.MessageDTO;
-import github.ag777.util.remote.ollama.okhttp.model.OllamaOptions;
-import github.ag777.util.remote.ollama.okhttp.model.OllamaRequestChat;
-import github.ag777.util.remote.ollama.okhttp.model.OllamaResponseChat;
-import lombok.Setter;
-import lombok.SneakyThrows;
-import okhttp3.Response;
+import github.ag777.util.remote.ollama.okhttp.model.OllamaMessage;
+import github.ag777.util.remote.ollama.okhttp.model.OllamaTool;
+import github.ag777.util.remote.ollama.okhttp.model.OllamaToolCall;
+import github.ag777.util.remote.ollama.okhttp.model.request.OllamaRequestChat;
+import github.ag777.util.remote.ollama.okhttp.util.response.OllamaResponseChatUtil;
+import lombok.Data;
+import lombok.experimental.Accessors;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 /**
- * <a href="https://github.com/ollama/ollama/blob/main/docs/api.md">ollama项目的API文档</a>
- * @author ag777＜ag777@vip.qq.com＞
- * @version 2024/2/17 23:42
+ * Ollama 聊天助手类，提供链式调用和简化的消息构建
+ * @author ag777
  */
+@Data
+@Accessors(chain = true)
 public class OllamaChatHelper {
-    @Setter
-    private String host = "localhost";
-    @Setter
-    private int port = 11434;
-    @Setter
-    private String path = "/api/chat";
+    protected final OllamaApiClient client;
+    private String model;
+    private List<OllamaTool> tools;
+    private Map<String, Object> options;
+    private final List<OllamaMessage> messages;
 
-    private final HttpHelper http;
-
-    public OllamaChatHelper(HttpHelper http) {
-        this.http = http;
+    public OllamaChatHelper(OllamaApiClient client) {
+        this.client = client;
+        this.messages = new ArrayList<>();
     }
 
-    @SneakyThrows
-    public static void main(String[] args) {
-        OllamaChatHelper helper = new OllamaChatHelper(new HttpHelper(HttpUtils.defaultBuilder().readTimeout(5, TimeUnit.MINUTES).build(), null));
-        helper.setHost("127.0.0.1");
-        helper.chatAsync(
-                "qwen2.5:14b",
-                OllamaOptions.newInstance().toMap(),
-                List.of(
-                        userMessage("讲一个笑话")
-                ),
-                System.out::print
-        );
+    public static OllamaChatHelper create(String host, int port, String model) {
+        OllamaApiClient client = new OllamaApiClient();
+        client.host(host);
+        client.port(port);
+        return new OllamaChatHelper(client)
+                .setModel(model);
     }
 
-
-    public String chat(String modelName, Map<String, Object> options, List<MessageDTO> messages) throws IOException, ValidateException {
-        OllamaResponseChat res = chatForRes(modelName, options, messages);
-        return getMessage(res);
+    // 消息构建方法
+    public OllamaChatHelper system(String content) {
+        messages.add(OllamaMessage.system(content));
+        return this;
     }
 
-    public OllamaResponseChat chatForRes(String modelName, Map<String, Object> options, List<MessageDTO> messages) throws IOException, ValidateException {
-        InputStream is = getInputStream(
-                getRequest(modelName, options, messages));
-        String reply = IOUtils.readText(is, StandardCharsets.UTF_8);
-        return GsonUtils.get().fromJson(reply, OllamaResponseChat.class);
+    public OllamaChatHelper user(String content) {
+        messages.add(OllamaMessage.user(content));
+        return this;
     }
 
-    public void chatAsync(String modelName, Map<String, Object> options, List<MessageDTO> messages, Consumer<String> onMsg) throws IOException, ValidateException {
-        chatAsyncForRes(modelName, options, messages, res->onMsg.accept(getMessage(res)));
-    }
-
-    public void chatAsyncForRes(String modelName, Map<String, Object> options, List<MessageDTO> messages, Consumer<OllamaResponseChat> onMsg) throws IOException, ValidateException {
-        InputStream is = getInputStream(
-                getRequest(modelName, options, messages));
-        IOUtils.readLines(is, line->{
-            OllamaResponseChat msg = GsonUtils.get().fromJson(line, OllamaResponseChat.class);
-            onMsg.accept(msg);
-        },StandardCharsets.UTF_8);
-    }
-
-    private static OllamaRequestChat getRequest(String modelName, Map<String, Object> options, List<MessageDTO> messages) {
-        return new OllamaRequestChat()
-                .setModel(modelName)
-                .setOptions(options)
-                .setStream(false)
-                .setMessages(messages);
-    }
-
-    private static String getMessage(OllamaResponseChat res) {
-        return res.getMessage().getContent();
+    public OllamaChatHelper assistant(String content) {
+        messages.add(OllamaMessage.assistant(content));
+        return this;
     }
 
 
-    private InputStream getInputStream(OllamaRequestChat requestChat) throws IOException, ValidateException {
-        MyCall call = http.postJson(
-                getUrl(),
-                GsonUtils.get().toJson(requestChat),
-                null,
-                null
-        );
-        Response response = call.executeForResponse();
-        if (!response.isSuccessful()) {
-            throw new ValidateException("response code:"+response.code());
-        }
-        Optional<InputStream> inputStream = HttpUtils.responseInputStream(response);
-        if (!inputStream.isPresent()) {
-            throw new ValidateException("response is empty");
-        }
-        return inputStream.get();
+    // 清空历史消息
+    public OllamaChatHelper clearHistory() {
+        messages.clear();
+        return this;
     }
 
     /**
-     * 创建一个系统消息对象。
-     * @param message 消息的内容。
-     * @return 返回一个初始化为系统角色的消息对象。
+     * 执行聊天
+     *
+     * @param userMessage 用户消息
+     * @return 聊天响应
+     * @throws IOException       IO异常
+     * @throws ValidateException 验证异常
+     * @throws Exception         其他异常
      */
-    public static MessageDTO systemMessage(String message) {
-        return new MessageDTO(MessageDTO.ROLE_SYSTEM, message);
+    public OllamaResponseChatUtil chat(String userMessage) throws IOException, ValidateException, Exception {
+        // 添加用户消息
+        List<OllamaMessage> messages = new ArrayList<>(this.messages.size());
+        messages.addAll(this.messages);
+        messages.add(OllamaMessage.user(userMessage));
+
+        // 准备请求
+        OllamaRequestChat request = OllamaRequestChat.of(model, options)
+                .messages(messages);
+
+        return client.chat(request);
     }
 
     /**
-     * 创建一个用户消息对象。
-     * @param message 消息的内容。
-     * @return 返回一个初始化为用户角色的消息对象。
+     * 使用用户消息进行聊天，并通过流式方式异步返回响应
+     *
+     * @param userMessage 用户输入的消息
+     * @param consumer 处理消息和工具调用的消费者
+     * @return 流式返回的所有消息的字符串形式
+     * @throws ValidateException 当请求参数无效时抛出
+     * @throws IOException 当网络请求发生错误时抛出
      */
-    public static MessageDTO userMessage(String message) {
-        return new MessageDTO(MessageDTO.ROLE_USER, message);
-    }
+    public String chatStream(String userMessage, BiConsumer<String, List<OllamaToolCall>> consumer) throws ValidateException, IOException {
+        // 添加用户消息
+        List<OllamaMessage> messages = new ArrayList<>(this.messages.size());
+        messages.addAll(this.messages);
+        messages.add(OllamaMessage.user(userMessage));
 
-    /**
-     * 创建一个助手消息对象。
-     * @param message 消息的内容。
-     * @return 返回一个初始化为助手角色的消息对象。
-     */
-    public static MessageDTO assistantMessage(String message) {
-        return new MessageDTO(MessageDTO.ROLE_ASSISTANT, message);
-    }
-
-    private String getUrl() {
-        return "http://" + host + ":" + port+path;
+        // 准备请求
+        OllamaRequestChat request = OllamaRequestChat.of(model, options)
+                .messages(messages);
+        StringBuilder sb = new StringBuilder();
+        // 发起流式聊天请求，并累积响应消息
+        client.chatStream(request, (msg, tcs)->{
+            sb.append(msg);
+            consumer.accept(msg, tcs);
+        });
+        return sb.toString();
     }
 }
