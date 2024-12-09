@@ -22,18 +22,34 @@ import java.util.List;
  * 基于文本嵌入向量的余弦相似度进行分类
  * 
  * 主要功能:
- * 1. 支持字典转换: 可以将相似的词转换为标准词
- * 2. 支持分类: 通过计算文本与各个类别的相似度进行分类
- * 3. 支持排除词: 可以设置每个类别的排除词列表
+ * 1. 支持字典转换: 可以将相似的词转换为标准词，实现词语标准化
+ * 2. 支持分类: 通过计算文本与各个类别的相似度进行分类，返回最匹配的类别
+ * 3. 支持排除词: 可以设置每个类别的排除词列表，提高分类准确性
+ * 
+ * 使用示例:
+ * <pre>
+ * TextClassifierUtil classifier = new TextClassifierUtil("model-name", client)
+ *     .addCategory("体育", null, List.of("体育", "跑步"), null)
+ *     .addCategory("数学", "数学相关知识", null, null);
+ * Pair<String, Double> result = classifier.classify("加法");
+ * </pre>
+ * 
+ * 工作原理:
+ * 1. 将输入文本转换为向量表示
+ * 2. 计算与各个类别的相似度
+ * 3. 根据相似度和排除规则确定最终分类
  * 
  * @author ag777 <837915770@vip.qq.com>
+ * @version 2024/12/6
  */
 public class TextClassifierUtil {
-    private String model;
-    private OllamaApiClient client;
+    private final String model;
+    private final OllamaApiClient client;
 
-    private List<Pair<Keyword, Keyword>> dict;
-    private List<Category> categories;
+    private final List<Pair<Keyword, Keyword>> dict;
+    private final List<Category> categories;
+
+    private double explainSimilarityThreshold = 0.8;
 
     /**
      * 构造函数
@@ -53,23 +69,24 @@ public class TextClassifierUtil {
         TextClassifierUtil u = new TextClassifierUtil(
                 model,
                 new OllamaApiClient()
-        ).addDict("jr", "巨乳")
+        )
         .addCategory(
                 "体育",
                 null,
-                List.of("体育", "跑步", "跳高"),
+                java.util.List.of("体育", "跑步", "跳高"),
                 null
         ).addCategory(
                 "数学",
+                "数学学科内的知识，比如三角函数等",
                 null,
-                List.of("数学", "三角函数", "微积分", "几何"),
                 null
         );
 
         // 测试各种变体
         String[] testCases = {
                 "加法",      // 标准形式
-                "游泳"
+                "游泳",
+                "语文"
         };
         
         for (String test : testCases) {
@@ -78,6 +95,11 @@ public class TextClassifierUtil {
             Console.prettyLog("分类结果: " + result.first+": "+result.second);
             Console.prettyLog("-------------------");
         }
+    }
+
+    public TextClassifierUtil withThresholdExplainSimilarity(double explainSimilarityThreshold) {
+        this.explainSimilarityThreshold = explainSimilarityThreshold;
+        return this;
     }
 
     /**
@@ -99,7 +121,7 @@ public class TextClassifierUtil {
             for (Pair<Keyword, Keyword> p : dict) {
                 // 计算输入词与字典中第一个词的相似度
                 double similarity = TextVectorUtils.cosineSimilarity(keyword.vector, p.first.vector);
-                System.out.println("[字典]"+p.first.keyword+": "+similarity);
+                log("[字典]"+p.first.keyword+": "+similarity);
                 if (similarity > mostSimilarScore) {
                     mostSimilarScore = similarity;
                     mostSimilarWord = p.first.keyword;
@@ -108,9 +130,9 @@ public class TextClassifierUtil {
             }
             
             // 如果找到高相似度的匹配（阈值可调整）
-            if (mostSimilarScore > 0.85) {
+            if (mostSimilarScore > explainSimilarityThreshold) {
                 keyword = mostSimilarTarget;
-                System.out.println("转换关键词: "+keyword);
+                log("转换关键词: "+keyword);
             }
         }
 
@@ -119,59 +141,67 @@ public class TextClassifierUtil {
             String mostSimilarCategory = null;
             double mostSimilarCategoryScore = -1;
             for (Category category : categories) {
-                double explainScore = -1;
-                if (category.explain != null) {
-                    explainScore = TextVectorUtils.cosineSimilarity(category.explain.vector, keyword.vector);
-                }
-                String mostSimilarExample = null;
-                double mostSimilarExampleScore = -1;
-                if (!ListUtils.isEmpty(category.examples)) {
-                    for (Keyword example : category.examples) {
-                        double score = TextVectorUtils.cosineSimilarity(example.vector, keyword.vector);
-                        System.out.println(example.keyword+": "+score);
-                        if (score > mostSimilarExampleScore) {
-                            mostSimilarExample = example.keyword;
-                            mostSimilarExampleScore = score;
-                        }
-                    }
-                }
-
-                String mostSimilarExclusion = null;
-                double mostSimilarExclusionScore = -1;
-                if (!ListUtils.isEmpty(category.exclusions)) {
-                    for (Keyword exclusion : category.exclusions) {
-                        double score = TextVectorUtils.cosineSimilarity(exclusion.vector, keyword.vector);
-                        System.out.println(exclusion.keyword+": "+score);
-                        if (score > mostSimilarExampleScore) {
-                            mostSimilarExclusion = exclusion.keyword;
-                            mostSimilarExclusionScore = score;
-                        }
-                        if (score == 1) {
-                            break;
-                        }
-                    }
-                }
-
-                if (explainScore > mostSimilarExampleScore) {
-                    mostSimilarExample = category.explain.keyword;
-                    mostSimilarExampleScore = explainScore;
-                }
-
-                double finalScore;
-                if (mostSimilarExampleScore > mostSimilarExclusionScore) {
-                    finalScore = mostSimilarExampleScore;
-                } else {
-                    finalScore = -mostSimilarExclusionScore;
-                }
-
-                if (finalScore > mostSimilarCategoryScore) {
+                double score = handleCategory(category, keyword.vector);
+                if (score > mostSimilarCategoryScore) {
                     mostSimilarCategory = category.name;
-                    mostSimilarCategoryScore = finalScore;
+                    mostSimilarCategoryScore = score;
                 }
             }
             return new Pair<>(mostSimilarCategory, mostSimilarCategoryScore);
         }
         return null;
+    }
+
+    private double handleCategory(Category category, List<Float> vector) {
+        double explainScore = -1;
+        if (category.explain != null) {
+            explainScore = TextVectorUtils.cosineSimilarity(category.explain.vector, vector);
+            log("[说明]"+category.explain.keyword+": "+explainScore);
+        }
+        String mostSimilarExample = null;
+        double mostSimilarExampleScore = -1;
+        if (!ListUtils.isEmpty(category.examples)) {
+            for (Keyword example : category.examples) {
+                double score = TextVectorUtils.cosineSimilarity(example.vector, vector);
+                log(example.keyword+": "+score);
+                if (score == 1) {
+                    return score;
+                }
+                if (score > mostSimilarExampleScore) {
+                    mostSimilarExample = example.keyword;
+                    mostSimilarExampleScore = score;
+                }
+            }
+        }
+
+        String mostSimilarExclusion = null;
+        double mostSimilarExclusionScore = -1;
+        if (!ListUtils.isEmpty(category.exclusions)) {
+            for (Keyword exclusion : category.exclusions) {
+                double score = TextVectorUtils.cosineSimilarity(exclusion.vector, vector);
+                log(exclusion.keyword+": "+score);
+                if (score == 1) {
+                    return -score;
+                }
+                if (score > mostSimilarExampleScore) {
+                    mostSimilarExclusion = exclusion.keyword;
+                    mostSimilarExclusionScore = score;
+                }
+            }
+        }
+
+        if (explainScore > mostSimilarExampleScore) {
+            mostSimilarExample = category.explain.keyword;
+            mostSimilarExampleScore = explainScore;
+        }
+
+        double finalScore;
+        if (mostSimilarExampleScore > mostSimilarExclusionScore) {
+            finalScore = mostSimilarExampleScore;
+        } else {
+            finalScore = -mostSimilarExclusionScore;
+        }
+        return finalScore;
     }
 
     /**
@@ -248,6 +278,14 @@ public class TextClassifierUtil {
             list.add(build(word));
         }
         return list;
+    }
+
+    /**
+     * 测试用
+     * @param msg 信息
+     */
+    private void log(String msg) {
+        System.out.println(msg);
     }
 
 
