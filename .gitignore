@@ -24,6 +24,7 @@
 *.iml
 /.idea
 /.idea/*.*
+/.vscode
 /out
 /logs
 /logs/*
