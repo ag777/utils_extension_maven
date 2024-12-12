@@ -36,7 +36,7 @@ import java.util.*;
  * - 向量维度由使用的Ollama模型决定
  * 
  * @author ag777 <837915770@vip.qq.com>
- * @version 2024/12/6 下午3:18
+ * @version 2024/12/12 下午17:51
  */
 public class TextVectorUtils {
 
@@ -293,7 +293,9 @@ public class TextVectorUtils {
         if (vectors == null || vectors.isEmpty()) {
             throw new IllegalArgumentException("向量列表不能为空");
         }
-        
+        if (vectors.size() == 1) {
+            return vectors.getFirst();
+        }
         int dimension = vectors.getFirst().size();
         List<Float> meanVector = new ArrayList<>(dimension);
         
