@@ -10,6 +10,7 @@ import com.ag777.util.lang.StringUtils;
 import com.ag777.util.lang.exception.model.JsonSyntaxException;
 import com.ag777.util.lang.exception.model.ValidateException;
 import com.google.gson.JsonObject;
+import github.ag777.util.remote.ollama.okhttp.interf.OnMessage;
 import github.ag777.util.remote.ollama.okhttp.model.OllamaToolCall;
 import github.ag777.util.remote.ollama.okhttp.model.request.*;
 import github.ag777.util.remote.ollama.okhttp.model.response.OllamaResponsePs;
@@ -17,6 +18,7 @@ import github.ag777.util.remote.ollama.okhttp.model.response.OllamaResponseTags;
 import github.ag777.util.remote.ollama.okhttp.util.response.OllamaResponseChatUtil;
 import github.ag777.util.remote.ollama.okhttp.util.response.OllamaResponseEmbedUtil;
 import github.ag777.util.remote.ollama.okhttp.util.response.OllamaResponseGenerateUtil;
+import github.ag777.util.remote.ollama.openai.util.OpenaiResponseChatUtil;
 import okhttp3.Response;
 
 import java.io.BufferedReader;
@@ -26,7 +28,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -40,7 +41,7 @@ import java.util.function.Consumer;
  * 
  * 2. 对话功能
  *    - 同步对话 {@link #chat(OllamaRequestChat)}
- *    - 流式对话 {@link #chatStream(OllamaRequestChat, BiConsumer)}
+ *    - 流式对话 {@link #chatStream(OllamaRequestChat, OnMessage)}
  * 
  * 3. 模型管理
  *    - 加载模型 {@link #loadModel(String)}
@@ -173,9 +174,10 @@ public class OllamaApiClient {
      * @param consumer 消费函数
      * @throws IOException          IO异常
      * @throws ValidateException    验证异常
+     * @throws InterruptedException  中断异常
      */
-    public void generateStream(OllamaRequestGenerate request, Consumer<String> consumer) throws IOException, ValidateException {
-        postStream(request, "/api/generate", jo -> {
+    public void generateStream(OllamaRequestGenerate request, Consumer<String> consumer) throws IOException, ValidateException, InterruptedException {
+        postStream(request, "/api/generate", false, jo -> {
             // {"model":"qwen2.5:14b","created_at":"2024-12-04T09:07:17.990324356Z","response":"To","done":false}
             String res = JsonObjectUtils.getStr(jo, "response");
             if (StringUtils.isEmpty(res)) {
@@ -202,18 +204,57 @@ public class OllamaApiClient {
      * 流式对话
      * 
      * @param request 请求参数
-     * @param consumer 消费函数
+     * @param onMessage 消费函数
      * @throws ValidateException 验证异常
      * @throws IOException       IO异常
+     * @throws InterruptedException 中断异常
      */
-    public void chatStream(OllamaRequestChat request, BiConsumer<String, List<OllamaToolCall>> consumer) throws ValidateException, IOException {
-        postStream(request, "/api/chat", jo -> {
+    public void chatStream(OllamaRequestChat request, OnMessage onMessage) throws ValidateException, IOException, InterruptedException {
+        postStream(request, "/api/chat", false, jo -> {
             // {"model":"qwen2.5:14b","created_at":"2024-12-05T00:39:03.577136734Z","message":{"role":"assistant","content":"```"},"done":false}
             // {"role":"assistant","content":"","tool_calls":[{"function":{"name":"get_current_weather","arguments":{"format":"celsius","location":"上海"}}}]}}
             OllamaResponseChatUtil res = new OllamaResponseChatUtil(jo);
             String message = res.getMessage();
             List<OllamaToolCall> functions = res.getToolCalls();
-            consumer.accept(message, functions);
+            if (message == null && functions == null) {
+                return;
+            }
+            onMessage.accept(StringUtils.emptyIfNull(message), functions);
+        });
+    }
+
+    /**
+     * 同步对话
+     *
+     * @param request 请求参数
+     * @return 响应结果
+     * @throws ValidateException 验证异常
+     * @throws IOException       IO异常
+     */
+    public OpenaiResponseChatUtil chatCompletions(OllamaRequestChat request) throws ValidateException, IOException {
+        JsonObject jo = post(request, "/v1/chat/completions");
+        return new OpenaiResponseChatUtil(jo);
+    }
+
+    /**
+     * 流式对话
+     *
+     * @param request 请求参数
+     * @param onMessage 消费函数
+     * @throws ValidateException 验证异常
+     * @throws IOException       IO异常
+     * @throws InterruptedException 中断异常
+     */
+    public void chatCompletionsStream(OllamaRequestChat request, OnMessage onMessage) throws ValidateException, IOException, InterruptedException {
+        postStream(request, "/v1/chat/completions", true, jo -> {
+            // {"model":"qwen2.5:14b","created_at":"2024-12-05T00:39:03.577136734Z","message":{"role":"assistant","content":"```"},"done":false}
+            // {"role":"assistant","content":"","tool_calls":[{"function":{"name":"get_current_weather","arguments":{"format":"celsius","location":"上海"}}}]}}
+            OpenaiResponseChatUtil res = new OpenaiResponseChatUtil(jo);
+            String message = res.getMessage();
+            if (message == null) {
+                return;
+            }
+            onMessage.accept(StringUtils.emptyIfNull(message), null);
         });
     }
 
@@ -268,8 +309,9 @@ public class OllamaApiClient {
      * @return 模型列表
      * @throws IOException          IO异常
      * @throws ValidateException    验证异常
+     * @throws InterruptedException 中断异常
      */
-    public List<OllamaResponseTags.Item> listModels() throws IOException, ValidateException {
+    public List<OllamaResponseTags.Item> listModels() throws IOException, ValidateException, InterruptedException {
         OllamaResponseTags res = get("/api/tags", OllamaResponseTags.class);
         return res.getModels();
     }
@@ -282,8 +324,9 @@ public class OllamaApiClient {
      * @throws IOException         当发生 IO 错误时抛出
      * @throws JsonSyntaxException 当 JSON 解析错误时抛出
      * @throws ValidateException  验证异常
+     * @throws InterruptedException 中断异常
      */
-    public List<OllamaResponsePs.Model> ps() throws IOException, JsonSyntaxException, ValidateException {
+    public List<OllamaResponsePs.Model> ps() throws IOException, JsonSyntaxException, ValidateException, InterruptedException {
         OllamaResponsePs res = get("/api/ps", OllamaResponsePs.class);
         return res.getModels();
     }
@@ -306,9 +349,10 @@ public class OllamaApiClient {
      * @param consumer 消费函数，用于处理创建过程中的状态信息
      * @throws ValidateException 验证异常
      * @throws IOException IO异常
+     * @throws InterruptedException 中断异常
      */
-    public void createModelStream(OllamaRequestCreate request, Consumer<String> consumer) throws ValidateException, IOException {
-        postStream(request, "/api/create", jo -> {
+    public void createModelStream(OllamaRequestCreate request, Consumer<String> consumer) throws ValidateException, IOException, InterruptedException {
+        postStream(request, "/api/create", false, jo -> {
             // {"status":"reading model metadata"}
             // {"status":"creating system layer"}
             // {"status":"writing manifest"}
@@ -362,7 +406,7 @@ public class OllamaApiClient {
      * @throws IOException          IO异常
      * @throws ValidateException    验证异常
      */
-    private InputStream getInputStream(Object request, String path) throws IOException, ValidateException {
+    private InputStreamResponse getInputStream(Object request, String path) throws IOException, ValidateException {
         String url = getUrl(path);
         String requestJson = GsonUtils.get().toJson(request);
         MyCall call = httpHelper.postJson(url, requestJson, null, null);
@@ -372,7 +416,7 @@ public class OllamaApiClient {
         }
         InputStream in = response.body().byteStream();
         if (response.isSuccessful()) {
-            return in;
+            return new InputStreamResponse(call, in);
         } else {
             String json = IOUtils.readText(in, StandardCharsets.UTF_8);
             try {
@@ -384,11 +428,11 @@ public class OllamaApiClient {
         }
     }
 
-    public <T>T get(String path, Class<T> clazz) throws IOException, ValidateException {
+    private <T>T get(String path, Class<T> clazz) throws IOException, ValidateException, InterruptedException {
         return get(path, json -> GsonUtils.get().fromJsonWithException(json, clazz));
     }
 
-    public <T>T get(String path, ResultTrans<T> trans) throws IOException, ValidateException {
+    private <T>T get(String path, ResultTrans<T> trans) throws IOException, ValidateException, InterruptedException {
         // 发起 HTTP GET 请求获取模型列表信息
         try (MyCall call = httpHelper.get(getUrl(path), null, null)) {
             // 执行请求并获取输入流，若响应体为空则抛出验证异常
@@ -412,11 +456,11 @@ public class OllamaApiClient {
      */
     private JsonObject post(OllamaRequestBase<?> request, String path) throws IOException, ValidateException {
         request.stream(false);
-        InputStream in = getInputStream(
+        InputStreamResponse in = getInputStream(
                 request,
                 path
         );
-        String json = IOUtils.readText(in, StandardCharsets.UTF_8);
+        String json = IOUtils.readText(in.body, StandardCharsets.UTF_8);
         try {
             return GsonUtils.toJsonObjectWithException(json);
         } catch (JsonSyntaxException e) {
@@ -426,39 +470,58 @@ public class OllamaApiClient {
 
     /**
      * 发送POST请求（流式）
-     * 
+     *
      * @param request 请求参数
      * @param path    请求路径
+     * @param openai 是否为openai格式
      * @param consumer 消费函数
      * @throws IOException          IO异常
      * @throws ValidateException    验证异常
      */
-    private void postStream(OllamaRequestBase<?> request, String path, StreamHandler<JsonObject> consumer) throws IOException, ValidateException {
+    private void postStream(OllamaRequestBase<?> request, String path, boolean openai, StreamHandler<JsonObject> consumer) throws IOException, ValidateException, InterruptedException {
         request.stream(true);
-        InputStream in = getInputStream(
+        InputStreamResponse in = getInputStream(
                 request,
                 path
         );
-        handleStream(in, consumer);
+        try {
+            handleStream(in.body, openai, consumer);
+        } finally {
+            in.call.cancel();
+        }
     }
 
     /**
      * 处理流式响应
      * 
      * @param in      输入流
+     * @param openai 是否为openai格式
      * @param consumer 消费函数
      * @throws ValidateException 验证异常
+     * @throws InterruptedException 线程中断异常
      */
-    private void handleStream(InputStream in, StreamHandler<JsonObject> consumer) throws ValidateException {
+    private void handleStream(InputStream in, boolean openai, StreamHandler<JsonObject> consumer) throws ValidateException, InterruptedException {
         try {
             BufferedReader procin = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
 
             String line;
+            String json;
             while ((line = procin.readLine()) != null) {
-                JsonObject jo = GsonUtils.toJsonObjectWithException(line);
+                if (openai) {
+                    if (!line.startsWith("data: ")) {
+                        continue;
+                    }
+                    json = line.substring(6);
+                    if ("[DONE]".equals(json)) {
+                        continue;
+                    }
+                } else {
+                    json = line;
+                }
+                JsonObject jo = GsonUtils.toJsonObjectWithException(json);
                 consumer.accept(jo);
             }
-        } catch (JsonSyntaxException e) {
+        } catch (JsonSyntaxException|IllegalStateException e) {
             throw new ValidateException("解析返回出现异常", e);
         } catch (IOException e) {
             throw new ValidateException("解析返回出现IO异常", e);
@@ -485,11 +548,13 @@ public class OllamaApiClient {
      */
     @FunctionalInterface
     public interface StreamHandler<T> {
-        void accept(T jo) throws JsonSyntaxException;
+        void accept(T jo) throws JsonSyntaxException, ValidateException, InterruptedException;
     }
 
     @FunctionalInterface
     public interface ResultTrans<T> {
-        T accept(String result) throws JsonSyntaxException;
+        T accept(String result) throws JsonSyntaxException, ValidateException, InterruptedException;
     }
+
+    public record InputStreamResponse(MyCall call, InputStream body) {}
 }

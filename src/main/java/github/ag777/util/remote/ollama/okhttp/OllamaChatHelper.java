@@ -1,9 +1,9 @@
 package github.ag777.util.remote.ollama.okhttp;
 
 import com.ag777.util.lang.exception.model.ValidateException;
+import github.ag777.util.remote.ollama.okhttp.interf.OnMessage;
 import github.ag777.util.remote.ollama.okhttp.model.OllamaMessage;
 import github.ag777.util.remote.ollama.okhttp.model.OllamaTool;
-import github.ag777.util.remote.ollama.okhttp.model.OllamaToolCall;
 import github.ag777.util.remote.ollama.okhttp.model.request.OllamaRequestChat;
 import github.ag777.util.remote.ollama.okhttp.util.response.OllamaResponseChatUtil;
 import lombok.Data;
@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 
 /**
  * Ollama 聊天助手类，提供链式调用和简化的消息构建
@@ -90,12 +89,13 @@ public class OllamaChatHelper {
      * 使用用户消息进行聊天，并通过流式方式异步返回响应
      *
      * @param userMessage 用户输入的消息
-     * @param consumer 处理消息和工具调用的消费者
+     * @param onMessage 处理消息和工具调用的消费者
      * @return 流式返回的所有消息的字符串形式
      * @throws ValidateException 当请求参数无效时抛出
      * @throws IOException 当网络请求发生错误时抛出
+     * @throws InterruptedException 当线程被中断时抛出
      */
-    public String chatStream(String userMessage, BiConsumer<String, List<OllamaToolCall>> consumer) throws ValidateException, IOException {
+    public String chatStream(String userMessage, OnMessage onMessage) throws ValidateException, IOException, InterruptedException {
         // 添加用户消息
         List<OllamaMessage> messages = new ArrayList<>(this.messages.size());
         messages.addAll(this.messages);
@@ -108,7 +108,7 @@ public class OllamaChatHelper {
         // 发起流式聊天请求，并累积响应消息
         client.chatStream(request, (msg, tcs)->{
             sb.append(msg);
-            consumer.accept(msg, tcs);
+            onMessage.accept(msg, tcs);
         });
         return sb.toString();
     }
