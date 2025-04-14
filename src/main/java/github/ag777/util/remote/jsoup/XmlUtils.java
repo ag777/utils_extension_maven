@@ -1,7 +1,6 @@
 package github.ag777.util.remote.jsoup;
 
 import com.ag777.util.file.FileUtils;
-import com.ag777.util.lang.SystemUtils;
 import com.ag777.util.lang.collection.CollectionAndMapUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
