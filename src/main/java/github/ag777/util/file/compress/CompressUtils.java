@@ -13,6 +13,7 @@ import java.io.IOException;
  * ①支持对tar.gz和zip文件的压缩解压
  * ②使用前请对参数文件的非空和存在性做校验，否则会抛出异常
  * ③压缩时空文件夹不会被丢弃,放心食用
+ * ④支持密码保护的7z文件解压，完全支持中文密码
  * <p>
  * 	需要jar包:
  * <ul>
@@ -25,7 +26,7 @@ import java.io.IOException;
  * </p>
  * 
  * @author ag777
- * @version create on 2018年04月12日,last modify at 2018年04月16日
+ * @version create on 2018年04月12日,last modify at 2025年06月15日
  */
 public class CompressUtils {
 
@@ -181,6 +182,7 @@ public class CompressUtils {
 		}
 	}
 	
+	//zip解压
 	/**
 	 * 解压zip包到指定路径
 	 * 
@@ -192,6 +194,9 @@ public class CompressUtils {
 		ZipUtils.getInstance().unZip(zipPath, targetPath);
 	}
 	
+
+	
+	//7z解压
 	/**
 	 * 解压7z包到指定路径
 	 * 
@@ -201,6 +206,37 @@ public class CompressUtils {
 	 */
 	public static void unSevenZ(String sevenZPath, String targetPath) throws IOException {
 		SevenZUtils.decompress(sevenZPath, targetPath);
+	}
+	
+	/**
+	 * 解压密码保护的7z包到指定路径
+	 * <p>
+	 * 注意：中文密码完全支持，推荐使用char[]参数版本以确保内存安全
+	 * </p>
+	 * 
+	 * @param sevenZPath 需要解压的7z文件路径
+	 * @param targetPath 解压的目标路径
+	 * @param password 解压密码（支持中文字符）
+	 * @throws IOException 如果文件不存在或解压过程中发生IO异常
+	 */
+	public static void unSevenZWithPassword(String sevenZPath, String targetPath, String password) throws IOException {
+		SevenZUtils.decompressWithPassword(sevenZPath, targetPath, password);
+	}
+	
+	/**
+	 * 解压密码保护的7z包到指定路径（推荐方法）
+	 * <p>
+	 * 使用char[]传递密码更安全，可以在使用后清空内存中的密码
+	 * 完全支持中文密码和其他Unicode字符
+	 * </p>
+	 * 
+	 * @param sevenZPath 需要解压的7z文件路径
+	 * @param targetPath 解压的目标路径
+	 * @param password 解压密码字符数组（支持中文字符，更安全）
+	 * @throws IOException 如果文件不存在或解压过程中发生IO异常
+	 */
+	public static void unSevenZWithPassword(String sevenZPath, String targetPath, char[] password) throws IOException {
+		SevenZUtils.decompressWithPassword(sevenZPath, targetPath, password);
 	}
 	
 	/*============内部方法================*/
@@ -229,13 +265,5 @@ public class CompressUtils {
 			files[i] = new File(paths[i]);
 		}
 		return files;
-	}
-	
-	public static void main(String[] args) throws Exception {
-		targz(new String[]{"f:\\a\\"}, "f:\\a.tar.gz");
-		unTargz("f:\\a.tar.gz", "e:\\");
-		
-		FileUtils.delete("f:\\a.tar.gz");
-//		FileUtils.delete("e:\\a\\");
 	}
 }

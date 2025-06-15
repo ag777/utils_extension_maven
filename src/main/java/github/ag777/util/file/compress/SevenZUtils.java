@@ -23,7 +23,7 @@ import java.io.*;
  * </p>
  * 
  * @author ag777
- * @version create on 2018年04月16日,last modify at 2019年07月30日
+ * @version create on 2018年04月16日,last modify at 2025年06月15日
  */
 public class SevenZUtils {
 	
@@ -109,6 +109,72 @@ public class SevenZUtils {
 			throw ex;
 		} finally {
 			IOUtils.close(tais);
+		}
+	}
+	
+	/**
+	 * 解压密码保护的7z压缩包
+	 * 
+	 * @param packagePath 需要解压的7z文件路径
+	 * @param targetPath 解压的目标路径
+	 * @param password 解压密码（支持中文字符）
+	 * @throws IOException 如果文件不存在或解压过程中发生IO异常
+	 */
+	public static void decompressWithPassword(String packagePath, String targetPath, String password) throws IOException {
+		decompressWithPassword(packagePath, targetPath, password.toCharArray());
+	}
+	
+	/**
+	 * 解压密码保护的7z压缩包
+	 * 
+	 * @param packagePath 需要解压的7z文件路径
+	 * @param targetPath 解压的目标路径
+	 * @param password 解压密码字符数组（支持中文字符，更安全）
+	 * @throws IOException 如果文件不存在或解压过程中发生IO异异常
+	 */
+	public static void decompressWithPassword(String packagePath, String targetPath, char[] password) throws IOException {
+		Assert.notExisted(packagePath, "需要解压的文件不存在:" + packagePath);
+		SevenZFile sevenZFile = null;
+		try {
+			File archiveFile = new File(packagePath);
+			// 使用密码创建SevenZFile
+			sevenZFile = new SevenZFile(archiveFile, password);
+			
+			ArchiveEntry entry = null;
+			while ((entry = sevenZFile.getNextEntry()) != null) {
+				
+				// 文件
+				String dir = targetPath + File.separator + entry.getName();
+
+				File dirFile = new File(dir);
+
+				// 文件检查
+//				FileUtils.makeDir(dirFile.getParent(), true);
+
+				if (entry.isDirectory()) {
+					dirFile.mkdirs();
+				} else {
+					BufferedOutputStream bos = null;
+					try {	//必须在这层包try-catch并及时关闭输出流，不然会导致输出空文件，而且解压后也无法删除文件(被占用)
+						bos = new BufferedOutputStream(new FileOutputStream(dirFile));
+	
+						int count;
+						byte data[] = new byte[BaseApacheCompressUtils.BUFFER];
+						while ((count = sevenZFile.read(data, 0, BaseApacheCompressUtils.BUFFER)) != -1) {
+							bos.write(data, 0, count);
+						}
+					} catch(Exception ex) {
+						throw ex;
+					} finally {
+						IOUtils.close(bos);
+					}
+				}
+
+			}
+		} catch (Exception ex) {
+			throw ex;
+		} finally {
+			IOUtils.close(sevenZFile);
 		}
 	}
 	
