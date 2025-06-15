@@ -1,9 +1,9 @@
-package github.ag777.util.remote.ai.openai.openai;
+package github.ag777.util.remote.ai.openai.http;
 
-import com.ag777.util.lang.exception.model.ValidateException;
+import github.ag777.util.lang.exception.model.ValidateException;
+import github.ag777.util.remote.ai.openai.http.interf.OpenaiOnMessage;
+import github.ag777.util.remote.ai.openai.http.request.OpenaiRequestChat;
 import github.ag777.util.remote.ai.openai.model.AiMessage;
-import github.ag777.util.remote.ai.openai.openai.interf.OpenaiOnMessage;
-import github.ag777.util.remote.ai.openai.openai.request.OpenaiRequestChat;
 
 import java.io.IOException;
 import java.util.List;

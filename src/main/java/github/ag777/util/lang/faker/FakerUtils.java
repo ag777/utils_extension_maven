@@ -1,6 +1,6 @@
 package github.ag777.util.lang.faker;
 
-import com.ag777.util.lang.RegexUtils;
+import github.ag777.util.lang.RegexUtils;
 import github.ag777.util.lang.faker.annotation.FakerConfig;
 import github.ag777.util.lang.faker.annotation.FakerSkip;
 import net.datafaker.Faker;

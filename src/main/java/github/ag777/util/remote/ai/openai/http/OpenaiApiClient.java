@@ -1,21 +1,21 @@
-package github.ag777.util.remote.ai.openai.openai;
+package github.ag777.util.remote.ai.openai.http;
 
-import com.ag777.util.gson.GsonUtils;
-import com.ag777.util.gson.JsonObjectUtils;
-import com.ag777.util.http.HttpHelper;
-import com.ag777.util.http.HttpUtils;
-import com.ag777.util.http.model.MyCall;
-import com.ag777.util.lang.IOUtils;
-import com.ag777.util.lang.StringUtils;
-import com.ag777.util.lang.exception.model.JsonSyntaxException;
-import com.ag777.util.lang.exception.model.ValidateException;
 import com.google.gson.JsonObject;
+import github.ag777.util.gson.GsonUtils;
+import github.ag777.util.gson.JsonObjectUtils;
+import github.ag777.util.http.HttpHelper;
+import github.ag777.util.http.HttpUtils;
+import github.ag777.util.http.model.MyCall;
+import github.ag777.util.lang.IOUtils;
+import github.ag777.util.lang.StringUtils;
+import github.ag777.util.lang.exception.model.GsonSyntaxException;
+import github.ag777.util.lang.exception.model.ValidateException;
+import github.ag777.util.remote.ai.openai.http.interf.OpenaiOnMessage;
+import github.ag777.util.remote.ai.openai.http.request.OpenaiRequestChat;
+import github.ag777.util.remote.ai.openai.http.util.OpenaiResponseChatStreamUtil;
+import github.ag777.util.remote.ai.openai.http.util.OpenaiResponseChatUtil;
 import github.ag777.util.remote.ai.openai.model.AiTool;
 import github.ag777.util.remote.ai.openai.model.request.RequestBase;
-import github.ag777.util.remote.ai.openai.openai.interf.OpenaiOnMessage;
-import github.ag777.util.remote.ai.openai.openai.request.OpenaiRequestChat;
-import github.ag777.util.remote.ai.openai.openai.util.OpenaiResponseChatStreamUtil;
-import github.ag777.util.remote.ai.openai.openai.util.OpenaiResponseChatUtil;
 import okhttp3.Response;
 
 import java.io.BufferedReader;
@@ -214,7 +214,7 @@ public class OpenaiApiClient {
             try {
                 JsonObject jo = GsonUtils.toJsonObjectWithException(json);
                 throw new ValidateException(JsonObjectUtils.getStr(jo, "error", "大模型服务返回码:" + response.code()));
-            } catch (JsonSyntaxException e) {
+            } catch (GsonSyntaxException e) {
                 throw new ValidateException("解析返回出现异常", e);
             }
         }
@@ -232,7 +232,7 @@ public class OpenaiApiClient {
         try (InputStream is = call.executeForInputStream().orElseThrow(() -> new ValidateException("Empty response body"))) {
             String json = IOUtils.readText(is, StandardCharsets.UTF_8);
             return trans.accept(json);
-        } catch (JsonSyntaxException e) {
+        } catch (GsonSyntaxException e) {
             throw new ValidateException("解析返回异常", e);
         }
     }
@@ -255,7 +255,7 @@ public class OpenaiApiClient {
         String json = IOUtils.readText(in.body, StandardCharsets.UTF_8);
         try {
             return GsonUtils.toJsonObjectWithException(json);
-        } catch (JsonSyntaxException e) {
+        } catch (GsonSyntaxException e) {
             throw new ValidateException("解析返回异常", e);
         }
     }
@@ -310,7 +310,7 @@ public class OpenaiApiClient {
                 JsonObject jo = GsonUtils.toJsonObjectWithException(json);
                 consumer.accept(jo);
             }
-        } catch (JsonSyntaxException|IllegalStateException e) {
+        } catch (GsonSyntaxException|IllegalStateException e) {
             throw new ValidateException("解析返回出现异常", e);
         } catch (IOException e) {
             throw new ValidateException("解析返回出现IO异常", e);
@@ -340,12 +340,12 @@ public class OpenaiApiClient {
      */
     @FunctionalInterface
     public interface StreamHandler<T> {
-        void accept(T jo) throws JsonSyntaxException, ValidateException, InterruptedException;
+        void accept(T jo) throws GsonSyntaxException, ValidateException, InterruptedException;
     }
 
     @FunctionalInterface
     public interface ResultTrans<T> {
-        T accept(String result) throws JsonSyntaxException, ValidateException, InterruptedException;
+        T accept(String result) throws GsonSyntaxException, ValidateException, InterruptedException;
     }
 
     public record InputStreamResponse(MyCall call, InputStream body) {}

@@ -1,8 +1,9 @@
 package github.ag777.util.remote.jsoup;
 
-import com.ag777.util.lang.collection.MapUtils;
+import github.ag777.util.lang.collection.MapUtils;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -69,7 +70,7 @@ public class JsoupBuilder {
 		if(cookieMap == null) {
 			synchronized (JsoupBuilder.class) {
 				if(cookieMap == null) {
-					cookieMap = MapUtils.newHashMap();
+					cookieMap = new HashMap<>(10);
 				}
 			}
 		}
@@ -101,7 +102,7 @@ public class JsoupBuilder {
 		if(headerMap == null) {
 			synchronized (JsoupBuilder.class) {
 				if(headerMap == null) {
-					headerMap = MapUtils.newHashMap();
+					headerMap = new HashMap<>(10);
 				}
 			}
 		}
@@ -130,7 +131,7 @@ public class JsoupBuilder {
 		if(dataMap == null) {
 			synchronized (JsoupBuilder.class) {
 				if(dataMap == null) {
-					dataMap = MapUtils.newHashMap();
+					dataMap = new HashMap<>(10);
 				}
 			}
 		}

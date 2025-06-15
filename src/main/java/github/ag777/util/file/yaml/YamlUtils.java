@@ -1,6 +1,6 @@
 package github.ag777.util.file.yaml;
 
-import com.ag777.util.lang.IOUtils;
+import github.ag777.util.lang.IOUtils;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 

@@ -1,6 +1,6 @@
 package github.ag777.util.netty;
 
-import com.ag777.util.gson.GsonUtils;
+import github.ag777.util.gson.GsonUtils;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;

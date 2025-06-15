@@ -1,4 +1,4 @@
-package github.ag777.util.remote.ai.openai.openai.request;
+package github.ag777.util.remote.ai.openai.http.request;
 
 import com.google.gson.annotations.SerializedName;
 import github.ag777.util.remote.ai.openai.model.request.RequestChat;

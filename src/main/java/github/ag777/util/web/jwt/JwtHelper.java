@@ -1,6 +1,5 @@
 package github.ag777.util.web.jwt;
 
-import com.ag777.util.lang.collection.MapUtils;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTCreator;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -8,6 +7,7 @@ import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTDecodeException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
+import github.ag777.util.lang.collection.MapUtils;
 
 import java.util.Date;
 import java.util.Map;

@@ -1,13 +1,13 @@
 package github.ag777.util.remote.jsoup;
 
-import com.ag777.util.file.FileUtils;
-import com.ag777.util.lang.collection.CollectionAndMapUtils;
+import github.ag777.util.file.FileUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -32,7 +32,7 @@ public class XmlUtils {
 	
 	public static Map<String,Object> getMap(String filePath, String tagName, String attr) throws IOException {
 		Document doc = load(filePath);
-		Map<String,Object> map = CollectionAndMapUtils.newHashMap();
+		Map<String,Object> map = new HashMap<>(10);
 		
 		Elements elements = doc.getElementsByTag(tagName);
 		for (Element element : elements) {

@@ -1,9 +1,9 @@
-package github.ag777.util.remote.ai.openai.openai.util;
+package github.ag777.util.remote.ai.openai.http.util;
 
-import com.ag777.util.gson.JsonObjectUtils;
-import com.ag777.util.lang.exception.model.JsonSyntaxException;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import github.ag777.util.gson.JsonObjectUtils;
+import github.ag777.util.lang.exception.model.GsonSyntaxException;
 import github.ag777.util.remote.ai.openai.model.response.ResponseBaseUtil;
 
 
@@ -58,9 +58,9 @@ public class OpenaiResponseChatUtil extends ResponseBaseUtil {
      * 从响应中提取message.content字段的值
      * 
      * @return 聊天消息文本内容
-     * @throws JsonSyntaxException 当JSON解析出错时抛出
+     * @throws GsonSyntaxException 当JSON解析出错时抛出
      */
-    public String getMessage() throws JsonSyntaxException {
+    public String getMessage() throws GsonSyntaxException {
         /*
         {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694268190,"model":"gpt-3.5-turbo-0613", "system_fingerprint": "fp_44709d6fcb", "choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
          */

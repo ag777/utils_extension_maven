@@ -1,8 +1,8 @@
-package github.ag777.util.remote.ai.openai.openai.interf;
+package github.ag777.util.remote.ai.openai.http.interf;
 
-import com.ag777.util.lang.exception.model.ValidateException;
+import github.ag777.util.lang.exception.model.ValidateException;
+import github.ag777.util.remote.ai.openai.http.util.OpenaiResponseChatStreamUtil;
 import github.ag777.util.remote.ai.openai.model.AiTool;
-import github.ag777.util.remote.ai.openai.openai.util.OpenaiResponseChatStreamUtil;
 
 /**
  * @author ag777 <837915770@vip.qq.com>

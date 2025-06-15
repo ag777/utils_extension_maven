@@ -1,7 +1,7 @@
 package github.ag777.util.remote.ai.openai.model.response;
 
-import com.ag777.util.gson.GsonUtils;
 import com.google.gson.JsonObject;
+import github.ag777.util.gson.GsonUtils;
 import lombok.Getter;
 
 /**

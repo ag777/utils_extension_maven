@@ -1,6 +1,6 @@
 package github.ag777.util.script.groovy;
 
-import com.ag777.util.lang.collection.MapUtils;
+import github.ag777.util.lang.collection.MapUtils;
 import groovy.lang.*;
 import groovy.util.GroovyScriptEngine;
 import groovy.util.ResourceException;

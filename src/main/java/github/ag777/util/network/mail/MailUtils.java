@@ -1,12 +1,12 @@
 package github.ag777.util.network.mail;
 
-import com.ag777.util.lang.collection.ListUtils;
-import com.ag777.util.lang.collection.MapUtils;
-import com.ag777.util.lang.exception.model.ValidateException;
 import com.sun.mail.smtp.SMTPAddressFailedException;
 import com.sun.mail.smtp.SMTPAddressSucceededException;
 import com.sun.mail.smtp.SMTPSendFailedException;
 import com.sun.mail.util.MailConnectException;
+import github.ag777.util.lang.collection.ListUtils;
+import github.ag777.util.lang.collection.MapUtils;
+import github.ag777.util.lang.exception.model.ValidateException;
 import jakarta.mail.*;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeBodyPart;

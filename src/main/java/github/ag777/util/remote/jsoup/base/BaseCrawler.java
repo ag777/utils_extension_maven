@@ -1,6 +1,6 @@
 package github.ag777.util.remote.jsoup.base;
 
-import com.ag777.util.lang.StringUtils;
+import github.ag777.util.lang.StringUtils;
 import github.ag777.util.remote.jsoup.JsoupBuilder;
 import github.ag777.util.remote.jsoup.JsoupUtils;
 

@@ -1,12 +1,12 @@
 package github.ag777.util.lang.jna;
 
-import com.ag777.util.lang.ObjectUtils;
-import com.ag777.util.lang.StringUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.*;
 import com.sun.jna.ptr.IntByReference;
+import github.ag777.util.lang.ObjectUtils;
+import github.ag777.util.lang.StringUtils;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
