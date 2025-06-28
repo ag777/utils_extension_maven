@@ -1,5 +1,6 @@
 package github.ag777.util.remote.ai.openai.http;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import github.ag777.util.gson.GsonUtils;
 import github.ag777.util.gson.JsonObjectUtils;
@@ -37,8 +38,8 @@ public class OpenaiApiClient {
 //    private static final Pattern P_END_OF_THINKING = Pattern.compile("<(?:/(?:t(?:h(?:i(?:n(?:k)?)?)?)?)?)?$");
     private final HttpHelper httpHelper;
 
+    private boolean https=false;
     private String host = "127.0.0.1";
-    private int port = 11434;
     private String url; // url优先度最高
     private Map<String, Object> headers;
 
@@ -60,6 +61,11 @@ public class OpenaiApiClient {
         this(new HttpHelper(HttpUtils.defaultBuilder()
                 .readTimeout(5, TimeUnit.MINUTES)
                 .build(), null));
+    }
+
+    public OpenaiApiClient https() {
+        this.https = true;
+        return this;
     }
 
     /**
@@ -84,17 +90,6 @@ public class OpenaiApiClient {
             url = url.substring(url.length()-1);
         }
         this.url = url;
-        return this;
-    }
-
-    /**
-     * 设置服务端口
-     *
-     * @param port 服务端口
-     * @return 当前实例
-     */
-    public OpenaiApiClient port(int port) {
-        this.port = port;
         return this;
     }
 
@@ -199,8 +194,6 @@ public class OpenaiApiClient {
     private InputStreamResponse getInputStream(Object request, String path) throws IOException, ValidateException {
         String url = getUrl(path);
         String requestJson = GsonUtils.get().toJson(request);
-        System.out.println(requestJson);
-        System.out.println("===");
         MyCall call = httpHelper.postJson(url, requestJson, null, headers);
         Response response = call.executeForResponse();
         if (response.body() == null) {
@@ -213,6 +206,13 @@ public class OpenaiApiClient {
             String json = IOUtils.readText(in, StandardCharsets.UTF_8);
             try {
                 JsonObject jo = GsonUtils.toJsonObjectWithException(json);
+                JsonElement error = JsonObjectUtils.get(jo, "error");
+                if (error == null) {
+                    throw new ValidateException("大模型服务返回码:" + response.code());
+                }
+                if (error.isJsonObject()) {
+                    throw new ValidateException(JsonObjectUtils.getStr(error.getAsJsonObject(), "message", "大模型服务返回码:" + response.code()));
+                }
                 throw new ValidateException(JsonObjectUtils.getStr(jo, "error", "大模型服务返回码:" + response.code()));
             } catch (GsonSyntaxException e) {
                 throw new ValidateException("解析返回出现异常", e);
@@ -330,7 +330,7 @@ public class OpenaiApiClient {
         if (url != null) {
             return url + path;
         }
-        return "http://" + host + ":" + port + path;
+        return (https?"https://":"http://") + host + path;
     }
 
     /**

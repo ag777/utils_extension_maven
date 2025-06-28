@@ -32,10 +32,9 @@ public class OpenAiChatHelper {
         this.messages = new ArrayList<>();
     }
 
-    public static OpenAiChatHelper create(String host, int port, String model) {
+    public static OpenAiChatHelper create(String host, String model) {
         OpenaiApiClient client = new OpenaiApiClient();
         client.host(host);
-        client.port(port);
         return new OpenAiChatHelper(client)
                 .setModel(model);
     }
