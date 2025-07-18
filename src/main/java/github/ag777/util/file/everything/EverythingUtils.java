@@ -1,8 +1,8 @@
 package github.ag777.util.file.everything;
 
-import com.ag777.util.lang.StringUtils;
 import com.sun.jna.Native;
 import github.ag777.util.file.everything.model.EverythingCmdOptions;
+import github.ag777.util.lang.StringUtils;
 
 import java.io.File;
 import java.io.IOException;

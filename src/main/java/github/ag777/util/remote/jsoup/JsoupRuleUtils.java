@@ -1,10 +1,10 @@
 package github.ag777.util.remote.jsoup;
 
-import com.ag777.util.lang.Console;
-import com.ag777.util.lang.RegexUtils;
-import com.ag777.util.lang.StringUtils;
-import com.ag777.util.lang.collection.ListUtils;
-import com.ag777.util.lang.collection.MapUtils;
+import github.ag777.util.lang.Console;
+import github.ag777.util.lang.RegexUtils;
+import github.ag777.util.lang.StringUtils;
+import github.ag777.util.lang.collection.ListUtils;
+import github.ag777.util.lang.collection.MapUtils;
 import github.ag777.util.remote.jsoup.model.Rule;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;

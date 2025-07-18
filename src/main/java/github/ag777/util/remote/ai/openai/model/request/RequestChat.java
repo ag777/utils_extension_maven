@@ -1,7 +1,7 @@
 package github.ag777.util.remote.ai.openai.model.request;
 
-import com.ag777.util.lang.IOUtils;
-import com.ag777.util.security.Base64Utils;
+import github.ag777.util.lang.IOUtils;
+import github.ag777.util.lang.security.Base64Utils;
 import github.ag777.util.remote.ai.openai.model.AiMessage;
 import github.ag777.util.remote.ai.openai.model.AiRoles;
 import lombok.Data;

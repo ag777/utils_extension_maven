@@ -1,9 +1,9 @@
 package github.ag777.util.freemarker;
 
-import com.ag777.util.lang.IOUtils;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
+import github.ag777.util.lang.IOUtils;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;

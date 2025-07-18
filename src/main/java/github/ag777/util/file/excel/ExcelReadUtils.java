@@ -1,11 +1,10 @@
 package github.ag777.util.file.excel;
 
-import com.ag777.util.file.FileUtils;
-import com.ag777.util.lang.IOUtils;
-import com.ag777.util.lang.StringUtils;
-import com.ag777.util.lang.collection.CollectionAndMapUtils;
-import com.ag777.util.lang.collection.ListUtils;
-import com.ag777.util.lang.exception.Assert;
+import github.ag777.util.file.FileUtils;
+import github.ag777.util.lang.IOUtils;
+import github.ag777.util.lang.StringUtils;
+import github.ag777.util.lang.collection.CollectionAndMapUtils;
+import github.ag777.util.lang.exception.Assert;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.poifs.filesystem.FileMagic;
@@ -54,7 +53,7 @@ public class ExcelReadUtils {
 	 * @return sheet名称列表
 	 */
 	public static List<String> getSheetNameList(Workbook wb) {
-		List<String> list = ListUtils.newArrayList();
+		List<String> list = new ArrayList<>(5);
 		Iterator<Sheet> itor = wb.sheetIterator();
 		while(itor.hasNext()) {
 			list.add(itor.next().getSheetName());
@@ -115,7 +114,7 @@ public class ExcelReadUtils {
 	 * @return {sheet的名字:[{"a","第一行第一列","b":"第一行第二列"},{"a":"第二行第一列"}]}
 	 */
 	public static Map<String, List<Map<String, String>>> readSheetMap(Workbook workBook, boolean isIgnoreFirstRow) {
-		Map<String, List<Map<String, String>>> sheetMap = CollectionAndMapUtils.newLinkedHashMap();
+		Map<String, List<Map<String, String>>> sheetMap = new LinkedHashMap<>(workBook.getNumberOfSheets());
 		Iterator<Sheet> itorSheet = workBook.sheetIterator();
 		while(itorSheet.hasNext()) {
 			Sheet sheet = itorSheet.next();
@@ -149,7 +148,7 @@ public class ExcelReadUtils {
 		Workbook workBook = WorkbookFactory.create(new File(filePath));
 		List<List<Map<String, String>>> list = readWorkBook(workBook, titles, isIgnoreFirstRow);
 		if(CollectionAndMapUtils.isEmpty(list)) {
-			return CollectionAndMapUtils.newArrayList();
+			return Collections.emptyList();
 		}
 		return list.get(0);
 	}
@@ -255,12 +254,12 @@ public class ExcelReadUtils {
 	}
 	
 	protected static List<Map<String, String>> getRowList(Sheet sheet, boolean isIgnoreFirstRow) {
-		List<Map<String, String>> rowList = CollectionAndMapUtils.newArrayList();
+		List<Map<String, String>> rowList = new ArrayList<>(sheet.getPhysicalNumberOfRows());
 //		String sheetName = sheet.getSheetName();
 		Iterator<Row> itorRow = sheet.rowIterator();
 		while(itorRow.hasNext()) {
-			Map<String, String> rowMap = CollectionAndMapUtils.newLinkedHashMap();
 			Row row = itorRow.next();
+			Map<String, String> rowMap = new LinkedHashMap<>(row.getLastCellNum());
 			if(isIgnoreFirstRow && row.getRowNum() == 0) {
 				continue;
 			}

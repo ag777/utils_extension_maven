@@ -1,7 +1,7 @@
 package github.ag777.util.file.csv;
 
-import com.ag777.util.lang.Console;
-import com.ag777.util.lang.IOUtils;
+import github.ag777.util.lang.Console;
+import github.ag777.util.lang.IOUtils;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;

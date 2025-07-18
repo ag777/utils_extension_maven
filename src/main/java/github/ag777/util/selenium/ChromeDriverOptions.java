@@ -1,6 +1,6 @@
 package github.ag777.util.selenium;
 
-import com.ag777.util.lang.collection.MapUtils;
+import github.ag777.util.lang.collection.MapUtils;
 import org.openqa.selenium.chrome.ChromeOptions;
 
 /**

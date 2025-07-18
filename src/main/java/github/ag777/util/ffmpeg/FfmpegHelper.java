@@ -1,13 +1,13 @@
 package github.ag777.util.ffmpeg;
 
-import com.ag777.util.file.FileUtils;
-import com.ag777.util.gson.GsonUtils;
-import com.ag777.util.lang.IOUtils;
-import com.ag777.util.lang.RegexUtils;
-import com.ag777.util.lang.StringUtils;
-import com.ag777.util.lang.collection.ListUtils;
-import com.ag777.util.lang.collection.MapUtils;
 import github.ag777.util.ffmpeg.model.FfmpegVideoOption;
+import github.ag777.util.file.FileUtils;
+import github.ag777.util.gson.GsonUtils;
+import github.ag777.util.lang.IOUtils;
+import github.ag777.util.lang.RegexUtils;
+import github.ag777.util.lang.StringUtils;
+import github.ag777.util.lang.collection.ListUtils;
+import github.ag777.util.lang.collection.MapUtils;
 import org.slf4j.Logger;
 
 import java.io.BufferedInputStream;

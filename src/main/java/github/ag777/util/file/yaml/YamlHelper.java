@@ -1,12 +1,12 @@
 package github.ag777.util.file.yaml;
 
-import com.ag777.util.lang.collection.MapUtils;
 import org.yaml.snakeyaml.DumperOptions;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -63,7 +63,7 @@ public class YamlHelper {
 	 * 初始化 YamlHelper 实例
 	 */
 	private void init() {
-	    this.map = MapUtils.newHashMap();
+	    this.map = new HashMap<>(10);
 	}
 
 	/**

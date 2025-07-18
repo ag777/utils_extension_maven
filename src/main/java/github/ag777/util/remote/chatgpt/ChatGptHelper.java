@@ -1,13 +1,13 @@
 package github.ag777.util.remote.chatgpt;
 
-import com.ag777.util.gson.GsonUtils;
-import com.ag777.util.http.HttpHelper;
-import com.ag777.util.http.HttpUtils;
-import com.ag777.util.http.model.MyCall;
-import com.ag777.util.lang.collection.MapUtils;
-import com.ag777.util.lang.exception.model.JsonSyntaxException;
-import com.ag777.util.lang.exception.model.ValidateException;
 import com.google.gson.annotations.SerializedName;
+import github.ag777.util.gson.GsonUtils;
+import github.ag777.util.http.HttpHelper;
+import github.ag777.util.http.HttpUtils;
+import github.ag777.util.http.model.MyCall;
+import github.ag777.util.lang.collection.MapUtils;
+import github.ag777.util.lang.exception.model.GsonSyntaxException;
+import github.ag777.util.lang.exception.model.ValidateException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -47,7 +47,7 @@ public class ChatGptHelper {
         );
     }
 
-    public static void main(String[] args) throws IOException, ValidateException, JsonSyntaxException {
+    public static void main(String[] args) throws IOException, ValidateException, GsonSyntaxException {
         // openai官网申请到的key, 代理地址，代理端口号
         String reply = withProxy("sk-xxx", "127.0.0.1", 8080)
                 .post(
@@ -60,7 +60,7 @@ public class ChatGptHelper {
         System.out.println(reply);
 
     }
-    public String post(GptRequest option) throws ValidateException, JsonSyntaxException, IOException {
+    public String post(GptRequest option) throws ValidateException, GsonSyntaxException, IOException {
         MyCall call = http.postJson(
                 endpoint+"/v1/chat/completions",
                 GsonUtils.get().toJson(option),
