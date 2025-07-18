@@ -33,10 +33,12 @@ public class CsvUtils {
         List<Map<String, Object>> list = new ArrayList<>();
         read(file, record->{
             if (record.getRecordNumber() == 1) {
-                return;
+                if (skipFirstRow) {
+                    return;
+                }
             }
             Map<String, Object> item = new HashMap<>();
-            int i=skipFirstRow?0:1;
+            int i=0;
             for (; i < titles.length; i++) {
                 item.put(titles[i], record.get(i));
             }
