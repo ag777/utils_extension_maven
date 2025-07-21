@@ -42,9 +42,9 @@ public class QlExpressUtils {
      * @param express 表达式
      * @param dataModel 数据模型
      * @return 执行结果
-     * @throws Exception 执行异常
+     * @throws QLException 执行异常
      */
-    public static String execute2Str(String express, Map<String, Object> dataModel) throws Exception {
+    public static String execute2Str(String express, Map<String, Object> dataModel) throws QLException {
         return execute2Str(express, dataModel, QLOptions.builder().precise(true).build());
     }
 
