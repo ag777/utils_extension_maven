@@ -178,6 +178,13 @@
             <version>2.2.2</version>
         </dependency>
 
+        <!-- ql表达式 -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>qlexpress4</artifactId>
+            <version>4.0.0-beta.9</version>
+        </dependency>
+
         <!-- lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
