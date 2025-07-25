@@ -162,7 +162,7 @@ public abstract class BaseQlFunction<T> implements CustomFunction {
      * @param index 索引
      * @return 布尔值
      */
-    public Boolean getBoolean(Parameters parameters, int index) {
+    public Boolean getBool(Parameters parameters, int index) {
         Object value = parameters.getValue(index);
         return ObjectUtils.toBoolean(value);
     }
@@ -174,7 +174,7 @@ public abstract class BaseQlFunction<T> implements CustomFunction {
      * @param defaultValue 默认值
      * @return 布尔值
      */
-    public Boolean getBoolean(Parameters parameters, int index, Boolean defaultValue) {
+    public Boolean getBool(Parameters parameters, int index, Boolean defaultValue) {
         Object value = parameters.getValue(index);
         return ObjectUtils.toBoolean(value, defaultValue);
     }
