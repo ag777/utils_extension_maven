@@ -141,13 +141,22 @@ public class IDMCommandBuilder {
     }
 
     /**
+     * 获取 IDM 可执行文件路径。
+     *
+     * @return IDM 可执行文件路径
+     */
+    public String idmanPath() {
+        return idmanPath;
+    }
+
+    /**
      * 设置 IDM 可执行文件路径。
      * 如果 IDM 的安装路径不在系统环境变量中，请使用此方法指定完整路径。
      *
      * @param idmanPath IDM 可执行文件路径（例如："C:\\Program Files\\Internet Download Manager\\IDMan.exe"）
      * @return 当前实例，支持链式调用
      */
-    public IDMCommandBuilder setIdmanPath(String idmanPath) {
+    public IDMCommandBuilder idmanPath(String idmanPath) {
         this.idmanPath = idmanPath;
         return this;
     }
