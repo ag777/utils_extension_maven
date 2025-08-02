@@ -126,7 +126,7 @@ public class IDMCommandBuilder {
         if (localFilename != null) {
             filename(localFilename);
         }
-//        silentMode();
+        silentMode();
         return execute(onLine);
     }
 
