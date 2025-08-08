@@ -1,4 +1,4 @@
-package github.ag777.util.file.everything.model;
+package github.ag777.util.software.everything.model;
 
 /**
  * <a href="https://www.voidtools.com/zh-cn/support/everything/command_line_interface/">命令行接口说明</a>

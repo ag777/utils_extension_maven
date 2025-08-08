@@ -1,4 +1,4 @@
-package github.ag777.util.file.everything;
+package github.ag777.util.software.everything;
 
 import com.sun.jna.Library;
 import com.sun.jna.WString;

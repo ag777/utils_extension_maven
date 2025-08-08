@@ -1,6 +1,6 @@
-package github.ag777.util.file.everything;
+package github.ag777.util.software.everything;
 
-import github.ag777.util.file.everything.model.EveryThingSearchOptions;
+import github.ag777.util.software.everything.model.EveryThingSearchOptions;
 
 import java.io.File;
 import java.io.IOException;

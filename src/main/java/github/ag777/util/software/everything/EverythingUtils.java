@@ -1,7 +1,7 @@
-package github.ag777.util.file.everything;
+package github.ag777.util.software.everything;
 
 import com.sun.jna.Native;
-import github.ag777.util.file.everything.model.EverythingCmdOptions;
+import github.ag777.util.software.everything.model.EverythingCmdOptions;
 import github.ag777.util.lang.StringUtils;
 
 import java.io.File;

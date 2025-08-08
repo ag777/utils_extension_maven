@@ -1,4 +1,4 @@
-package github.ag777.util.file.idm;
+package github.ag777.util.software.idm;
 
 import java.io.BufferedReader;
 import java.io.IOException;

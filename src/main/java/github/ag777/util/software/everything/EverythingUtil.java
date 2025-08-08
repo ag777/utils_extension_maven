@@ -1,7 +1,7 @@
-package github.ag777.util.file.everything;
+package github.ag777.util.software.everything;
 
 import com.sun.jna.WString;
-import github.ag777.util.file.everything.model.EveryThingSearchOptions;
+import github.ag777.util.software.everything.model.EveryThingSearchOptions;
 import lombok.Getter;
 
 import java.io.File;
