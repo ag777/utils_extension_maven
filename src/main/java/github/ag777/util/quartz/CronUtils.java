@@ -1,16 +1,16 @@
 package github.ag777.util.quartz;
 
+import github.ag777.util.lang.DateUtils;
 import org.quartz.CronExpression;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Optional;
 
 /**
  * Cron表达式计算工具类
  * @author ag777 <837915770@vip.qq.com>
- * @version 2025/8/1 15:54
+ * @version 2025/8/8 16:03
  */
 public class CronUtils {
 
@@ -25,10 +25,7 @@ public class CronUtils {
      */
     public static Optional<String> calculateNextFireTimeFormatted(String cronExpression, Date currentTime, String dateFormat) throws ParseException {
         Optional<Date> date = calculateNextFireTime(cronExpression, currentTime);
-        if (date.isPresent()) {
-            return formatOptionalDate(date.get(), dateFormat);
-        }
-        return Optional.empty();
+        return date.map(value -> DateUtils.toString(value, dateFormat));
     }
 
     /**
@@ -45,28 +42,6 @@ public class CronUtils {
         return Optional.ofNullable(nextValidTimeAfter);
     }
 
-    /**
-     * 辅助方法，用于将Date对象格式化为字符串。
-     *
-     * @param date 需要格式化的日期
-     * @param dateFormat 日期格式
-     * @return 格式化后日期的Optional封装。如果日期为null，则返回Optional.empty()
-     */
-    private static Optional<String> formatOptionalDate(Date date, String dateFormat) {
-        if (date == null) {
-            return Optional.empty();
-        }
-        SimpleDateFormat formatter = new SimpleDateFormat(dateFormat);
-        return Optional.of(formatter.format(date));
-    }
-
-    /**
-     * 判断Cron表达式是否为周期性任务
-     *
-     * @param cronExpression Cron表达式
-     * @return true表示周期性任务，false表示一次性任务
-     * @throws ParseException 如果Cron表达式解析失败
-     */
     /**
      * 判断Cron表达式是否为周期性任务
      * 通过分析表达式结构判断，比计算下次执行时间更高效
@@ -90,6 +65,13 @@ public class CronUtils {
     public static boolean isOneTimeTask(String cronExpression) throws ParseException {
         String[] fields = parseCronExpression(cronExpression);
         return isOneTimeYear(fields) && hasOnlySpecificValues(fields);
+    }
+
+    /**
+     * 将Date对象转换为Cron表达式（精确到秒，格式：ss mm HH dd MM ? yyyy）
+     */
+    public static String toCron(Date date) {
+        return DateUtils.toString(date, "ss mm HH dd MM ? yyyy");
     }
 
     /**
