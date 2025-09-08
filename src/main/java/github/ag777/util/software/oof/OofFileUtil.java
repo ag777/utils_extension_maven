@@ -6,6 +6,7 @@ import github.ag777.util.http.HttpApiUtils;
 import github.ag777.util.http.HttpHelper;
 import github.ag777.util.http.HttpUtils;
 import github.ag777.util.http.model.MyCall;
+import github.ag777.util.http.model.ProgressListener;
 import github.ag777.util.lang.Console;
 import github.ag777.util.lang.exception.model.GsonSyntaxException;
 import github.ag777.util.lang.exception.model.ValidateException;
@@ -55,13 +56,14 @@ public class OofFileUtil {
      * 上传文件到115
      * @param file 文件
      * @param cid 115对应路径的cid
+     * @param progressListener 进度监听器
      * @return 文件id
      * @throws ValidateException 上传文件异常
      * @throws FileNotFoundException 文件不存在异常
      * @throws GsonSyntaxException 解析json异常
      */
-    public String upload(File file, String cid) throws ValidateException, FileNotFoundException, GsonSyntaxException {
-        return upload(file, file.getName(), cid);
+    public String upload(File file, String cid, ProgressListener progressListener) throws ValidateException, FileNotFoundException, GsonSyntaxException {
+        return upload(file, file.getName(), cid, progressListener);
     }
 
     /**
@@ -69,14 +71,15 @@ public class OofFileUtil {
      * @param file 文件
      * @param fileName 文件名
      * @param cid 115对应路径的cid
+     * @param progressListener 进度监听器
      * @return 文件id
      * @throws ValidateException 上传文件异常
      * @throws FileNotFoundException 文件不存在异常
      * @throws GsonSyntaxException 解析json异常
      */
-    public String upload(File file, String fileName, String cid) throws ValidateException, FileNotFoundException, GsonSyntaxException {
+    public String upload(File file, String fileName, String cid, ProgressListener progressListener) throws ValidateException, FileNotFoundException, GsonSyntaxException {
         Map<String, Object> permission = getPermission(file, fileName, cid);
-        return upload(file, permission);
+        return upload(file, permission, progressListener);
     }
 
     /**
@@ -158,14 +161,16 @@ public class OofFileUtil {
      * @return 文件id
      * @throws FileNotFoundException 文件不存在异常
      * @throws ValidateException 上传文件异常
+     * @param progressListener 进度监听器
      */
-    private String upload(File file, Map<String, Object> permission) throws FileNotFoundException, ValidateException {
+    private String upload(File file, Map<String, Object> permission, ProgressListener progressListener) throws FileNotFoundException, ValidateException {
         MyCall call = http.postMultiFiles(
                 "https://fhnfile.oss-cn-shenzhen.aliyuncs.com",
                 "file",
                 new File[]{file},
                 permission,
-                null
+                null,
+                progressListener
         );
 
         try {
@@ -252,6 +257,7 @@ public class OofFileUtil {
         );
         Console.prettyLog(uploader.upload(
                 new File("example_file.txt"),
-                "example_cid_1234567890"));
+                "example_cid_1234567890",
+                null));
     }
 }
