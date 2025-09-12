@@ -51,6 +51,11 @@
             <artifactId>easypoi-annotation</artifactId>
             <version>${poi.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-scratchpad</artifactId>
+            <version>4.1.1</version>
+        </dependency>
 
         <!--pdf转图片-->
         <dependency>
