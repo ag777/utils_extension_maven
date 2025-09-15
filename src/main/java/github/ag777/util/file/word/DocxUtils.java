@@ -1,5 +1,6 @@
 package github.ag777.util.file.word;
 
+import github.ag777.util.file.FileUtils;
 import github.ag777.util.file.word.model.PicInfo;
 import org.apache.poi.xwpf.usermodel.*;
 
@@ -12,14 +13,24 @@ import java.util.function.Function;
  * 基于Apache POI的XWPF API实现
  *
  * @author ag777 <837915770@vip.qq.com>
- * @version create on 2025年09月11日,last modify at 2025年09月12日
+ * @version create on 2025年09月11日,last modify at 2025年09月15日
  */
 public class DocxUtils {
     
     /**
      * 将DOCX文档直接转换为HTML字符串
      * @param inputStream DOCX文件输入流
-     * @param fileName 文件名
+     * @return HTML字符串
+     * @throws Exception 转换异常
+     */
+    public static String convertToHtml(InputStream inputStream) throws Exception {
+        return convertToHtml(inputStream, null, true, null);
+    }
+    
+    /**
+     * 将DOCX文档直接转换为HTML字符串
+     * @param inputStream DOCX文件输入流
+     * @param fileName 文件名（可选，用于设置HTML title）
      * @return HTML字符串
      * @throws Exception 转换异常
      */
@@ -30,13 +41,13 @@ public class DocxUtils {
     /**
      * 将DOCX文档直接转换为HTML字符串（可控制图片处理）
      * @param inputStream DOCX文件输入流
-     * @param fileName 文件名
+     * @param fileName 文件名（可选，用于设置HTML title）
      * @param processImages 是否处理图片
      * @param imageHandler 图片处理器，为null时使用默认处理器
      * @return HTML字符串
      * @throws Exception 转换异常
      */
-    public static String convertToHtml(InputStream inputStream, String fileName, 
+    public static String convertToHtml(InputStream inputStream, String fileName,
                                      boolean processImages, Function<PicInfo, String> imageHandler) throws Exception {
         try (XWPFDocument document = new XWPFDocument(inputStream)) {
             StringBuilder html = new StringBuilder();
@@ -47,7 +58,7 @@ public class DocxUtils {
             html.append("<head>\n");
             html.append("    <meta charset=\"UTF-8\">\n");
             html.append("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
-            html.append("    <title>").append(escapeHtml(fileName != null ? fileName : "Document")).append("</title>\n");
+            html.append("    <title>").append(escapeHtml(getDocumentTitle(fileName))).append("</title>\n");
             html.append("    <style>\n");
             html.append(getDefaultCss());
             html.append("    </style>\n");
@@ -134,6 +145,20 @@ public class DocxUtils {
                 margin-top: 8px;
             }
             """;
+    }
+    
+    /**
+     * 获取文档标题
+     * @param fileName 文件名
+     * @return 文档标题
+     */
+    private static String getDocumentTitle(String fileName) {
+        if (fileName != null && !fileName.trim().isEmpty()) {
+            // 使用FileUtils去掉扩展名
+            String title = FileUtils.replaceLongExtension(fileName.trim(), "");
+            return title.isEmpty() ? "Word Document" : title;
+        }
+        return "Word Document";
     }
     
     /**
