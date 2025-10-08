@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 /**
  * 示例ql正则表达式函数 调用示例: find("aa123a", "\\d+")
  * @author ag777 <837915770@vip.qq.com>
- * @version 2024/7/26 上午8:59
+ * @version 2025/10/8 上午12:03
  */
 public class QlFuncFind extends BaseQlFunction<String> {
     @Override
@@ -28,9 +28,14 @@ public class QlFuncFind extends BaseQlFunction<String> {
         if (regex == null) {
             throw new ValidateException("缺少参数[正则表达式]");
         }
+        Integer flags = getInt(parameters, 3);
         Pattern pattern;
         try {
-            pattern = Pattern.compile(regex);
+            if (flags == null) {
+                pattern = Pattern.compile(regex);
+            } else {
+                pattern = Pattern.compile(regex, flags);
+            }
         } catch (Exception e) {
             throw new ValidateException("参数[正则表达式]格式错误:"+regex, e);
         }
