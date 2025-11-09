@@ -1,15 +1,15 @@
 package github.ag777.util.http.apache;
 
 import github.ag777.util.http.apache.model.PoolStatus;
-import lombok.Getter;
+import github.ag777.util.http.apache.model.PooledConnection;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.routing.DefaultProxyRoutePlanner;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.util.Timeout;
 
-import java.io.IOException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -30,48 +30,8 @@ public class SimpleHttpConnectionPool {
     // 代理配置
     private volatile HttpHost proxyHost;
 
-    /**
-     * 连接包装类
-     */
-    public static class PooledConnection implements AutoCloseable {
-        @Getter
-        private final CloseableHttpClient httpClient;
-        private final long createTime;
-        @Getter
-        private volatile boolean valid = true;
-        private volatile boolean returned = false;
-        private final SimpleHttpConnectionPool pool;
-
-        private PooledConnection(CloseableHttpClient httpClient, SimpleHttpConnectionPool pool) {
-            this.httpClient = httpClient;
-            this.createTime = System.currentTimeMillis();
-            this.pool = pool;
-        }
-
-        public void markInvalid() {
-            this.valid = false;
-        }
-
-        /**
-         * 将连接归还给连接池（放回队列尾部）
-         */
-        @Override
-        public void close() {
-            if (!returned) {
-                pool.returnConnection(this);
-                returned = true;
-            }
-        }
-
-        private void destroy() {
-            try {
-                httpClient.close();
-            } catch (IOException e) {
-                // 忽略关闭异常
-            }
-            valid = false;
-        }
-    }
+    // 请求配置构建器
+    private final RequestConfig.Builder requestConfigBuilder;
 
     /**
      * 构造函数
@@ -82,17 +42,17 @@ public class SimpleHttpConnectionPool {
     }
 
     /**
-     * 构造函数（支持代理）
+     * 构造函数（支持代理和请求配置）
      * @param poolSize 连接池大小
-     * @param proxyHost 代理服务器，null表示不使用代理
+     * @param requestConfigBuilder 请求配置构建器，null表示使用默认配置
      */
-    public SimpleHttpConnectionPool(int poolSize, HttpHost proxyHost) {
+    public SimpleHttpConnectionPool(int poolSize, RequestConfig.Builder requestConfigBuilder) {
         if (poolSize <= 0) {
             throw new IllegalArgumentException("连接池大小必须大于0");
         }
 
         this.poolSize = poolSize;
-        this.proxyHost = proxyHost;
+        this.requestConfigBuilder = requestConfigBuilder != null ? requestConfigBuilder : createDefaultRequestConfigBuilder();
         this.connectionQueue = new ArrayBlockingQueue<>(poolSize);
         this.connectionManager = new PoolingHttpClientConnectionManager();
 
@@ -107,6 +67,7 @@ public class SimpleHttpConnectionPool {
         this.proxyHost = proxyHost;
         return this;
     }
+
 
     /**
      * 设置代理
@@ -128,6 +89,23 @@ public class SimpleHttpConnectionPool {
     }
 
     /**
+     * 设置Clash代理（默认端口10801）
+     */
+    public SimpleHttpConnectionPool setClashProxy() {
+        setProxy(10801);
+        return this;
+    }
+
+    /**
+     * 设置Clash代理
+     * @param port Clash代理端口
+     */
+    public SimpleHttpConnectionPool setClashProxy(int port) {
+        setProxy(port);
+        return this;
+    }
+
+    /**
      * 初始化连接池
      */
     private void initializePool() {
@@ -141,11 +119,18 @@ public class SimpleHttpConnectionPool {
      */
     private void addNewConnectionToPool() {
         try {
-            CloseableHttpClient httpClient = HttpClients.custom()
+            var clientBuilder = HttpClients.custom()
                     .setConnectionManager(connectionManager)
                     .setConnectionManagerShared(true)
-                    .setDefaultRequestConfig(createRequestConfig())
-                    .build();
+                    .setDefaultRequestConfig(createRequestConfig());
+
+            // 如果设置了代理，则添加路由规划器
+            if (proxyHost != null) {
+                DefaultProxyRoutePlanner routePlanner = new DefaultProxyRoutePlanner(proxyHost);
+                clientBuilder.setRoutePlanner(routePlanner);
+            }
+
+            CloseableHttpClient httpClient = clientBuilder.build();
 
             PooledConnection newConnection = new PooledConnection(httpClient, this);
             if (connectionQueue.offer(newConnection)) {
@@ -157,19 +142,19 @@ public class SimpleHttpConnectionPool {
     }
 
     /**
+     * 创建默认请求配置构建器
+     */
+    private RequestConfig.Builder createDefaultRequestConfigBuilder() {
+        return RequestConfig.custom()
+                .setConnectionRequestTimeout(Timeout.ofMilliseconds(10000))
+                .setResponseTimeout(Timeout.ofMilliseconds(30000));
+    }
+
+    /**
      * 创建请求配置（包含代理设置）
      */
     private RequestConfig createRequestConfig() {
-        RequestConfig.Builder configBuilder = RequestConfig.custom()
-                .setConnectTimeout(Timeout.ofMilliseconds(10000))
-                .setResponseTimeout(Timeout.ofMilliseconds(30000));
-
-        // 如果设置了代理，则添加到配置中
-        if (proxyHost != null) {
-            configBuilder.setProxy(proxyHost);
-        }
-
-        return configBuilder.build();
+        return requestConfigBuilder.build();
     }
 
     /**
@@ -189,7 +174,7 @@ public class SimpleHttpConnectionPool {
 
             // 等待获取连接，最多等待10秒
             PooledConnection connection = connectionQueue.poll(10, TimeUnit.SECONDS);
-            if (connection != null && !connection.valid) {
+            if (connection != null && !connection.isValid()) {
                 // 连接已失效，销毁并递归获取新连接
                 activeConnections.decrementAndGet();
                 connection.destroy();
@@ -204,14 +189,14 @@ public class SimpleHttpConnectionPool {
     /**
      * 将连接返回连接池（放回队列尾部，内部方法，由PooledConnection.close()调用）
      */
-    private void returnConnection(PooledConnection connection) {
-        if (connection == null || !connection.valid) {
+    public void returnConnection(PooledConnection connection) {
+        if (connection == null || !connection.isValid()) {
             return;
         }
 
         poolLock.lock();
         try {
-            connection.returned = false; // 重置标志
+            connection.setReturned(false); // 重置标志
             // 如果队列已满，销毁这个连接
             if (!connectionQueue.offer(connection)) {
                 connection.destroy();
