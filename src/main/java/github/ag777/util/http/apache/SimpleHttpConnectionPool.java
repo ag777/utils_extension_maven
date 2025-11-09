@@ -27,6 +27,10 @@ public class SimpleHttpConnectionPool {
     private final AtomicInteger activeConnections = new AtomicInteger(0);
     private final ReentrantLock poolLock = new ReentrantLock();
 
+    // 默认超时配置
+    private final long defaultTimeout;
+    private final TimeUnit defaultTimeUnit;
+
     // 代理配置
     private volatile HttpHost proxyHost;
 
@@ -38,7 +42,7 @@ public class SimpleHttpConnectionPool {
      * @param poolSize 连接池大小
      */
     public SimpleHttpConnectionPool(int poolSize) {
-        this(poolSize, null);
+        this(poolSize, null, 10, TimeUnit.SECONDS);
     }
 
     /**
@@ -47,12 +51,28 @@ public class SimpleHttpConnectionPool {
      * @param requestConfigBuilder 请求配置构建器，null表示使用默认配置
      */
     public SimpleHttpConnectionPool(int poolSize, RequestConfig.Builder requestConfigBuilder) {
+        this(poolSize, requestConfigBuilder, 10, TimeUnit.SECONDS);
+    }
+
+    /**
+     * 构造函数（支持代理、请求配置和超时设置）
+     * @param poolSize 连接池大小
+     * @param requestConfigBuilder 请求配置构建器，null表示使用默认配置
+     * @param defaultTimeout 默认超时时间
+     * @param defaultTimeUnit 默认超时时间单位
+     */
+    public SimpleHttpConnectionPool(int poolSize, RequestConfig.Builder requestConfigBuilder, long defaultTimeout, TimeUnit defaultTimeUnit) {
         if (poolSize <= 0) {
             throw new IllegalArgumentException("连接池大小必须大于0");
+        }
+        if (defaultTimeout <= 0) {
+            throw new IllegalArgumentException("超时时间必须大于0");
         }
 
         this.poolSize = poolSize;
         this.requestConfigBuilder = requestConfigBuilder != null ? requestConfigBuilder : createDefaultRequestConfigBuilder();
+        this.defaultTimeout = defaultTimeout;
+        this.defaultTimeUnit = defaultTimeUnit;
         this.connectionQueue = new ArrayBlockingQueue<>(poolSize);
         this.connectionManager = new PoolingHttpClientConnectionManager();
 
@@ -118,6 +138,7 @@ public class SimpleHttpConnectionPool {
      * 创建新连接并添加到池中
      */
     private void addNewConnectionToPool() {
+        PooledConnection newConnection = null;
         try {
             var clientBuilder = HttpClients.custom()
                     .setConnectionManager(connectionManager)
@@ -131,13 +152,20 @@ public class SimpleHttpConnectionPool {
             }
 
             CloseableHttpClient httpClient = clientBuilder.build();
+            newConnection = new PooledConnection(httpClient, this);
 
-            PooledConnection newConnection = new PooledConnection(httpClient, this);
+            // 尝试将连接添加到队列
             if (connectionQueue.offer(newConnection)) {
                 activeConnections.incrementAndGet();
+            } else {
+                // 队列已满，销毁刚创建的连接
+                newConnection.destroy();
             }
         } catch (Exception e) {
-            // 忽略创建连接时的异常
+            // 创建连接失败，清理资源
+            if (newConnection != null) {
+                newConnection.destroy();
+            }
         }
     }
 
@@ -158,29 +186,64 @@ public class SimpleHttpConnectionPool {
     }
 
     /**
-     * 从连接池借用连接（从队列头部获取）
+     * 从连接池借用连接（从队列头部获取），使用默认超时时间
      * 这个方法是线程安全的
      *
      * @return 连接对象，使用完后必须调用close()方法归还
      * @throws InterruptedException 如果等待连接时被中断
      */
     public PooledConnection borrowConnection() throws InterruptedException {
+        return borrowConnection(defaultTimeout, defaultTimeUnit);
+    }
+
+    /**
+     * 从连接池借用连接（从队列头部获取），指定超时时间
+     * 这个方法是线程安全的
+     *
+     * @param timeout 超时时间
+     * @param unit 时间单位
+     * @return 连接对象，使用完后必须调用close()方法归还，null表示超时
+     * @throws InterruptedException 如果等待连接时被中断
+     */
+    public PooledConnection borrowConnection(long timeout, TimeUnit unit) throws InterruptedException {
+        long startTime = System.nanoTime();
+        long remainingTimeout = unit.toNanos(timeout);
+
         poolLock.lock();
         try {
-            // 如果队列为空但未达到最大连接数，创建新连接
-            if (connectionQueue.isEmpty() && activeConnections.get() < poolSize) {
-                addNewConnectionToPool();
+            while (remainingTimeout > 0) {
+                // 如果队列为空但未达到最大连接数，创建新连接
+                if (connectionQueue.isEmpty() && activeConnections.get() < poolSize) {
+                    addNewConnectionToPool();
+                }
+
+                // 等待获取连接，使用剩余超时时间
+                long currentTimeout = Math.max(remainingTimeout, TimeUnit.MILLISECONDS.toNanos(100)); // 最少100ms
+                PooledConnection connection = connectionQueue.poll(currentTimeout, TimeUnit.NANOSECONDS);
+
+                if (connection != null) {
+                    // 检查连接是否仍然有效
+                    if (!connection.isValid()) {
+                        // 连接无效，销毁并减少计数，然后继续循环获取新连接
+                        activeConnections.decrementAndGet();
+                        connection.destroy();
+                    } else {
+                        // 连接有效，返回
+                        return connection;
+                    }
+                } else {
+                    // 获取连接超时，返回null
+                    return null;
+                }
+
+                // 计算剩余超时时间
+                long elapsed = System.nanoTime() - startTime;
+                remainingTimeout -= elapsed;
+                startTime = System.nanoTime(); // 重置开始时间
             }
 
-            // 等待获取连接，最多等待10秒
-            PooledConnection connection = connectionQueue.poll(10, TimeUnit.SECONDS);
-            if (connection != null && !connection.isValid()) {
-                // 连接已失效，销毁并递归获取新连接
-                activeConnections.decrementAndGet();
-                connection.destroy();
-                return borrowConnection();
-            }
-            return connection;
+            // 所有重试都超时，返回null
+            return null;
         } finally {
             poolLock.unlock();
         }
@@ -190,12 +253,22 @@ public class SimpleHttpConnectionPool {
      * 将连接返回连接池（放回队列尾部，内部方法，由PooledConnection.close()调用）
      */
     public void returnConnection(PooledConnection connection) {
-        if (connection == null || !connection.isValid()) {
+        if (connection == null) {
             return;
         }
 
+        // 在归还前测试连接是否仍然有效
+        boolean isValid = connection.isValid();
+
         poolLock.lock();
         try {
+            if (!isValid) {
+                // 连接无效，销毁并减少计数
+                connection.destroy();
+                activeConnections.decrementAndGet();
+                return;
+            }
+
             connection.setReturned(false); // 重置标志
             // 如果队列已满，销毁这个连接
             if (!connectionQueue.offer(connection)) {
