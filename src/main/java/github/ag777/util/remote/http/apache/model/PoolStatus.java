@@ -1,4 +1,4 @@
-package github.ag777.util.http.apache.model;
+package github.ag777.util.remote.http.apache.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

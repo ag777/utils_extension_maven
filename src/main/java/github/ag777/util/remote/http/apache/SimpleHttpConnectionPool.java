@@ -1,7 +1,7 @@
-package github.ag777.util.http.apache;
+package github.ag777.util.remote.http.apache;
 
-import github.ag777.util.http.apache.model.PoolStatus;
-import github.ag777.util.http.apache.model.PooledConnection;
+import github.ag777.util.remote.http.apache.model.PoolStatus;
+import github.ag777.util.remote.http.apache.model.PooledConnection;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;

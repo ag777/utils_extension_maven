@@ -1,5 +1,5 @@
 
-package github.ag777.util.netty;
+package github.ag777.util.remote.netty;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;

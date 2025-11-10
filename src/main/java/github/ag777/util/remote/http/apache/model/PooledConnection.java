@@ -1,6 +1,6 @@
-package github.ag777.util.http.apache.model;
+package github.ag777.util.remote.http.apache.model;
 
-import github.ag777.util.http.apache.SimpleHttpConnectionPool;
+import github.ag777.util.remote.http.apache.SimpleHttpConnectionPool;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;

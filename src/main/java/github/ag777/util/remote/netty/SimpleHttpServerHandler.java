@@ -1,4 +1,4 @@
-package github.ag777.util.netty;
+package github.ag777.util.remote.netty;
 
 import github.ag777.util.gson.GsonUtils;
 import io.netty.buffer.Unpooled;
