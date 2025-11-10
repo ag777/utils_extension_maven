@@ -13,7 +13,6 @@ import org.apache.hc.core5.util.Timeout;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -24,7 +23,7 @@ public class SimpleHttpConnectionPool {
     private final BlockingQueue<PooledConnection> connectionQueue;
     private final int poolSize;
     private final PoolingHttpClientConnectionManager connectionManager;
-    private final AtomicInteger activeConnections = new AtomicInteger(0);
+//    private final AtomicInteger activeConnections = new AtomicInteger(0);
     private final ReentrantLock poolLock = new ReentrantLock();
 
     // 默认超时配置
@@ -102,7 +101,7 @@ public class SimpleHttpConnectionPool {
     /**
      * 设置代理
      * @param port Clash代理端口
-     */
+     */`
     public SimpleHttpConnectionPool setProxy(int port) {
         setProxy("127.0.0.1", port);
         return this;
@@ -156,7 +155,6 @@ public class SimpleHttpConnectionPool {
 
             // 尝试将连接添加到队列
             if (connectionQueue.offer(newConnection)) {
-                activeConnections.incrementAndGet();
             } else {
                 // 队列已满，销毁刚创建的连接
                 newConnection.destroy();
@@ -212,10 +210,6 @@ public class SimpleHttpConnectionPool {
         poolLock.lock();
         try {
             while (remainingTimeout > 0) {
-                // 如果队列为空但未达到最大连接数，创建新连接
-                if (connectionQueue.isEmpty() && activeConnections.get() < poolSize) {
-                    addNewConnectionToPool();
-                }
 
                 // 等待获取连接，使用剩余超时时间
                 long currentTimeout = Math.max(remainingTimeout, TimeUnit.MILLISECONDS.toNanos(100)); // 最少100ms
@@ -225,8 +219,9 @@ public class SimpleHttpConnectionPool {
                     // 检查连接是否仍然有效
                     if (!connection.isValid()) {
                         // 连接无效，销毁并减少计数，然后继续循环获取新连接
-                        activeConnections.decrementAndGet();
                         connection.destroy();
+                        // 由于销毁了一个连接，这里立即补充一个新的连接
+                        addNewConnectionToPool();
                     } else {
                         // 连接有效，返回
                         return connection;
@@ -265,7 +260,7 @@ public class SimpleHttpConnectionPool {
             if (!isValid) {
                 // 连接无效，销毁并减少计数
                 connection.destroy();
-                activeConnections.decrementAndGet();
+                addNewConnectionToPool();
                 return;
             }
 
@@ -273,7 +268,6 @@ public class SimpleHttpConnectionPool {
             // 如果队列已满，销毁这个连接
             if (!connectionQueue.offer(connection)) {
                 connection.destroy();
-                activeConnections.decrementAndGet();
             }
         } finally {
             poolLock.unlock();
@@ -288,7 +282,6 @@ public class SimpleHttpConnectionPool {
         if (connection != null) {
             connection.markInvalid();
             connection.destroy();
-            activeConnections.decrementAndGet();
 
             poolLock.lock();
             try {
@@ -305,8 +298,9 @@ public class SimpleHttpConnectionPool {
     public PoolStatus getPoolStatus() {
         poolLock.lock();
         try {
+            long activeConnections = connectionQueue.stream().filter(PooledConnection::isValid).count();
             return new PoolStatus(
-                    activeConnections.get(),
+                    (int)activeConnections,
                     connectionQueue.size(),
                     poolSize
             );
@@ -324,7 +318,6 @@ public class SimpleHttpConnectionPool {
             PooledConnection connection;
             while ((connection = connectionQueue.poll()) != null) {
                 connection.destroy();
-                activeConnections.decrementAndGet();
             }
 
             connectionManager.close();
