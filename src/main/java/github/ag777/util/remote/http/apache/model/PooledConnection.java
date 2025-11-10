@@ -2,10 +2,10 @@ package github.ag777.util.remote.http.apache.model;
 
 import github.ag777.util.remote.http.apache.SimpleHttpConnectionPool;
 import lombok.Getter;
-import lombok.Setter;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 连接包装类
@@ -16,8 +16,7 @@ public class PooledConnection implements AutoCloseable {
     private final long createTime;
     @Getter
     private volatile boolean valid = true;
-    @Setter
-    private volatile boolean returned = false;
+    private final AtomicBoolean returned = new AtomicBoolean(true);
     private final SimpleHttpConnectionPool pool;
 
     public PooledConnection(CloseableHttpClient httpClient, SimpleHttpConnectionPool pool) {
@@ -31,13 +30,20 @@ public class PooledConnection implements AutoCloseable {
     }
 
     /**
+     * 标记：该连接被借出，等待归还
+     */
+    public void markBorrowed() {
+        returned.set(false);
+    }
+
+    /**
      * 将连接归还给连接池（放回队列尾部）
      */
     @Override
     public void close() {
-        if (!returned) {
+        // 仅在“借出未归还”时归还一次
+        if (returned.compareAndSet(false, true)) {
             pool.returnConnection(this);
-            returned = true;
         }
     }
 
