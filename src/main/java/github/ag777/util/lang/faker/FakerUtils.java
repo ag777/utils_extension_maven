@@ -96,8 +96,9 @@ public class FakerUtils {
             return reg;
         }
         Pattern p = Pattern.compile("(?<!\\\\)\\$\\?\\$");
-        return RegexUtils.replace(reg, p, (m, i)->{
-            String[] group = groups[i];
+        int[] i = {0};
+        return RegexUtils.replace(reg, p, (m)->{
+            String[] group = groups[i[0]++];
             if (group.length == 0) {
                 return "";
             }
