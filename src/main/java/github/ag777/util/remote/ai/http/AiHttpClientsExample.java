@@ -31,17 +31,17 @@ public class AiHttpClientsExample {
      * https://api.deepseek.com
      * https://api.siliconflow.cn
      */
-    private static final String BASE_URL = "https://api.siliconflow.cn";
+    private static final String BASE_URL = "https://api.deepseek.com";
 
     /**
      * 改成你自己的 key。
      */
-    private static final String API_KEY = "sk-dxjrmquxtvvlqpdpiovfoidxcgcjtwnqquavnsgzfexcralt";
+    private static final String API_KEY = "sk-your-api-key";
 
     /**
      * 改成你自己的模型名。
      */
-    private static final String MODEL = "deepseek-ai/DeepSeek-V3.2";
+    private static final String MODEL = "deepseek-chat";
 
     private AiHttpClientsExample() {
     }
@@ -53,7 +53,7 @@ public class AiHttpClientsExample {
         // simplestChat();
         // sessionChat();
         // customRequestChat();
-         streamChat();
+        // streamChat();
         // asyncChat();
         // asyncChatAndCancel();
         // customConfigClient();
