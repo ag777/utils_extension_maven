@@ -121,6 +121,9 @@ public class AiHttpClient {
         AiHttpFuture future = new AiHttpFuture();
         Executor executor = config.executor();
         executor.execute(() -> {
+            if (future.isCancelled()) {
+                return;
+            }
             try {
                 AiHttpResponse response = execute(request, streamHandler != null, streamHandler, future);
                 if (!future.isDone()) {
@@ -161,6 +164,9 @@ public class AiHttpClient {
         if (request == null) {
             throw new IllegalArgumentException("request不能为空");
         }
+        if (future != null && future.isCancelled()) {
+            throw new CancellationException("请求已取消");
+        }
         Map<String, Object> body = provider.buildRequestBody(request, stream);
         String requestJson = GsonUtils.get().toJson(body);
         Map<String, Object> headers = buildHeaders();
@@ -169,6 +175,9 @@ public class AiHttpClient {
         MyCall call = httpHelper.postJson(url, requestJson, null, headers);
         if (future != null) {
             future.bind(call);
+            if (future.isCancelled()) {
+                throw new CancellationException("请求已取消");
+            }
         }
         if (streamHandler != null) {
             streamHandler.onStart(request);
