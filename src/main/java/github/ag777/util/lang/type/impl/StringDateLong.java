@@ -1,8 +1,8 @@
-package com.kd.sprite2.util.lang.type.impl;
+package github.ag777.util.lang.type.impl;
 
-import com.kd.sprite2.util.lang.DateUtils;
-import com.kd.sprite2.util.lang.ObjectUtils;
-import com.kd.sprite2.util.lang.type.MultiType;
+import github.ag777.util.lang.DateUtils;
+import github.ag777.util.lang.ObjectUtils;
+import github.ag777.util.lang.type.MultiType;
 
 import java.util.Date;
 

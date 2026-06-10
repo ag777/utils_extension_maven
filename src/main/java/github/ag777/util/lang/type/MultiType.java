@@ -1,4 +1,4 @@
-package com.kd.sprite2.util.lang.type;
+package github.ag777.util.lang.type;
 
 import java.util.Objects;
 import java.util.function.Function;
