@@ -167,6 +167,7 @@ public class AiHttpClient {
         if (future != null && future.isCancelled()) {
             throw new CancellationException("请求已取消");
         }
+        request.flushPendingUserParts();
         Map<String, Object> body = provider.buildRequestBody(request, stream);
         String requestJson = GsonUtils.get().toJson(body);
         Map<String, Object> headers = buildHeaders();
@@ -218,6 +219,8 @@ public class AiHttpClient {
 
     private AiHttpResponse readStream(InputStream inputStream, AiHttpStreamHandler streamHandler, AiHttpFuture future) throws IOException, GsonSyntaxException {
         AiHttpResponseAccumulator accumulator = new AiHttpResponseAccumulator();
+        boolean reasoningStarted = false;
+        boolean contentStarted = false;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -229,7 +232,7 @@ public class AiHttpClient {
                 }
                 String payload = line.substring(6);
                 if ("[DONE]".equals(payload)) {
-                    continue;
+                    break;
                 }
                 JsonObject json;
                 try {
@@ -241,10 +244,24 @@ public class AiHttpClient {
                 accumulator.append(chunk);
                 if (streamHandler != null) {
                     if (chunk.hasReasoning()) {
+                        if (!reasoningStarted) {
+                            streamHandler.onStartReasoning(chunk);
+                            reasoningStarted = true;
+                        }
                         streamHandler.onReasoning(chunk.reasoning(), chunk);
+                    } else if (reasoningStarted) {
+                        streamHandler.onEndReasoning(chunk);
+                        reasoningStarted = false;
                     }
                     if (chunk.hasContent()) {
+                        if (!contentStarted) {
+                            streamHandler.onStartContent(chunk);
+                            contentStarted = true;
+                        }
                         streamHandler.onContent(chunk.content(), chunk);
+                    } else if (contentStarted) {
+                        streamHandler.onEndContent(chunk);
+                        contentStarted = false;
                     }
                     if (chunk.hasToolCalls()) {
                         for (AiHttpToolCallDelta toolCall : chunk.toolCalls()) {
@@ -253,6 +270,15 @@ public class AiHttpClient {
                     }
                     streamHandler.onChunk(chunk);
                 }
+            }
+        }
+        // 确保在流结束时调用结束回调
+        if (streamHandler != null) {
+            if (reasoningStarted) {
+                streamHandler.onEndReasoning(null);
+            }
+            if (contentStarted) {
+                streamHandler.onEndContent(null);
             }
         }
         AiHttpResponse result = accumulator.toResponse();

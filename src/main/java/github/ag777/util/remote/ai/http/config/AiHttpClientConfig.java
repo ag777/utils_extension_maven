@@ -4,6 +4,7 @@ import github.ag777.util.http.HttpHelper;
 import github.ag777.util.http.HttpUtils;
 import okhttp3.OkHttpClient;
 
+import java.net.Proxy;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -39,8 +40,8 @@ public class AiHttpClientConfig {
     private String apiKeyHeader = "Authorization";
     private String apiKeyPrefix = "Bearer ";
     private final Map<String, Object> headers = new LinkedHashMap<>();
-    private HttpHelper httpHelper;
-    private Executor executor = Executors.newCachedThreadPool();
+    private volatile HttpHelper httpHelper;
+    private volatile Executor executor;
 
     /**
      * 创建指定基础URL的配置对象。
@@ -184,7 +185,7 @@ public class AiHttpClientConfig {
      * 
      * @return HTTP助手实例
      */
-    public HttpHelper httpHelper() {
+    public synchronized HttpHelper httpHelper() {
         if (httpHelper == null) {
             OkHttpClient client = HttpUtils.defaultBuilder()
                     .readTimeout(10, TimeUnit.MINUTES)
@@ -206,11 +207,52 @@ public class AiHttpClientConfig {
     }
 
     /**
+     * 设置HTTP代理。
+     * 
+     * @param ip 代理服务器IP或域名
+     * @param port 代理服务器端口
+     * @return 当前配置对象，支持链式调用
+     */
+    public AiHttpClientConfig proxy(String ip, int port) {
+        OkHttpClient client = HttpUtils.builderWithProxy(
+                        HttpUtils.defaultBuilder()
+                                .readTimeout(10, TimeUnit.MINUTES),
+                        ip,
+                        port
+                )
+                .build();
+        this.httpHelper = new HttpHelper(client, null);
+        return this;
+    }
+
+    /**
+     * 设置HTTP代理。
+     * 
+     * @param proxy 代理对象，传入 {@link Proxy#NO_PROXY} 可禁用代理
+     * @return 当前配置对象，支持链式调用
+     */
+    public AiHttpClientConfig proxy(Proxy proxy) {
+        OkHttpClient client = HttpUtils.defaultBuilder()
+                .readTimeout(10, TimeUnit.MINUTES)
+                .proxy(proxy)
+                .build();
+        this.httpHelper = new HttpHelper(client, null);
+        return this;
+    }
+
+    /**
      * 获取异步执行器。
      * 
      * @return 异步执行器
      */
-    public Executor executor() {
+    public synchronized Executor executor() {
+        if (executor == null) {
+            executor = Executors.newCachedThreadPool(r -> {
+                Thread t = new Thread(r, "ai-http-client");
+                t.setDaemon(true);
+                return t;
+            });
+        }
         return executor;
     }
 

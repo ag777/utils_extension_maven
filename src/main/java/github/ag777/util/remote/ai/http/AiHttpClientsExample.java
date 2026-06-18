@@ -3,15 +3,15 @@ package github.ag777.util.remote.ai.http;
 import github.ag777.util.remote.ai.http.client.AiHttpChatSession;
 import github.ag777.util.remote.ai.http.client.AiHttpClient;
 import github.ag777.util.remote.ai.http.config.AiHttpClientConfig;
-import github.ag777.util.remote.ai.http.model.AiHttpChunk;
-import github.ag777.util.remote.ai.http.model.AiHttpRequest;
-import github.ag777.util.remote.ai.http.model.AiHttpResponse;
-import github.ag777.util.remote.ai.http.model.AiHttpToolCall;
-import github.ag777.util.remote.ai.http.model.AiHttpToolCallDelta;
+import github.ag777.util.remote.ai.http.model.*;
+import github.ag777.util.remote.ai.http.openai.model.AiImageDetail;
+import github.ag777.util.remote.ai.http.openai.model.AiMessageContentPart;
+import github.ag777.util.remote.ai.http.openai.model.request.RequestTool;
 import github.ag777.util.remote.ai.http.stream.AiHttpFuture;
 import github.ag777.util.remote.ai.http.stream.AiHttpStreamHandler;
-import github.ag777.util.remote.ai.openai.model.request.RequestTool;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -31,17 +31,28 @@ public class AiHttpClientsExample {
      * https://api.deepseek.com
      * https://api.siliconflow.cn
      */
-    private static final String BASE_URL = "https://api.deepseek.com";
+    private static final String BASE_URL = "https://api.siliconflow.cn";
 
     /**
      * 改成你自己的 key。
      */
-    private static final String API_KEY = "sk-your-api-key";
+    private static final String API_KEY = "sk-dxjrmquxtvvlqpdpiovfoidxcgcjtwnqquavnsgzfexcralt";
 
     /**
      * 改成你自己的模型名。
      */
-    private static final String MODEL = "deepseek-chat";
+    private static final String MODEL = "deepseek-ai/DeepSeek-V3.2";
+
+    /**
+     * 改成你要使用的多模态模型名。
+     */
+    private static final String VISION_MODEL = "Qwen/Qwen2.5-VL-72B-Instruct";
+
+    /**
+     * 如需代理，改成你的本地代理地址。
+     */
+    private static final String PROXY_IP = "127.0.0.1";
+    private static final int PROXY_PORT = 7890;
 
     private AiHttpClientsExample() {
     }
@@ -53,11 +64,14 @@ public class AiHttpClientsExample {
         // simplestChat();
         // sessionChat();
         // customRequestChat();
-        // streamChat();
+        streamChat();
         // asyncChat();
         // asyncChatAndCancel();
         // customConfigClient();
+        // proxyChat();
         // toolCallChat();
+        // multimodalImageChat();
+        // multimodalMultiImageChat();
     }
 
     /**
@@ -248,7 +262,31 @@ public class AiHttpClientsExample {
     }
 
     /**
-     * 场景8：带 tool 定义的调用，以及如何读取 tool call。
+     * 场景8：代理调用。
+     * <p>
+     * 如果你的网络环境需要代理，可以直接用带代理的快捷入口，或者在自定义配置中链式调用 proxy。
+     * </p>
+     */
+    public static void proxyChat() {
+        AiHttpChatSession session = AiHttpClients.openAiCompatibleSession(BASE_URL, API_KEY, MODEL, PROXY_IP, PROXY_PORT)
+                .system("你是一个中文技术写作助手");
+
+        AiHttpResponse response = session.chat("请用一句话说明当前请求已通过代理配置发起");
+        System.out.println(response.content());
+
+        AiHttpClientConfig config = AiHttpClientConfig.create(BASE_URL)
+                .apiKey(API_KEY)
+                .proxy(PROXY_IP, PROXY_PORT);
+        AiHttpClient client = AiHttpClient.openAiCompatible(config);
+        AiHttpResponse directResponse = client.chat(
+                AiHttpRequest.ofModel(MODEL)
+                        .user("再用一句话说明链式 proxy 配置方式")
+        );
+        System.out.println(directResponse.content());
+    }
+
+    /**
+     * 场景9：带 tool 定义的调用，以及如何读取 tool call。
      * <p>
      * 这里展示的是“声明工具 + 读取模型返回的工具调用”。
      * </p>
@@ -270,6 +308,66 @@ public class AiHttpClientsExample {
 
         System.out.println("content = " + response.content());
         printToolCalls(response);
+    }
+
+    /**
+     * 场景10：多模态图片理解。
+     * <p>
+     * 适合使用 OpenAI Chat Completions 兼容的视觉模型处理图片URL或data URL。
+     * </p>
+     */
+    public static void multimodalImageChat() throws Exception {
+        AiHttpClient client = AiHttpClients.openAiCompatible(BASE_URL, API_KEY);
+
+        String imageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/1280px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg";
+        AiHttpResponse response = client.chat(
+                AiHttpRequest.ofModel(VISION_MODEL)
+                        .userTextAndImage("请用中文描述这张图片中的主要内容", imageUrl, AiImageDetail.AUTO)
+                        .maxTokens(512)
+        );
+        System.out.println(response.content());
+
+        AiHttpChatSession session = AiHttpClients.openAiCompatibleSession(BASE_URL, API_KEY, VISION_MODEL)
+                .system("你是一个图片内容分析助手");
+        AiHttpResponse next = session.chat(List.of(
+                AiMessageContentPart.text("这张图适合做旅行封面吗？请给出理由"),
+                AiMessageContentPart.imageUrl(imageUrl, AiImageDetail.LOW)
+        ));
+        System.out.println(next.content());
+    }
+
+    /**
+     * 场景11：链式多图对比（文本 + 多张图片合并为一条 user 消息）。
+     * <p>
+     * 最终请求体等价于：
+     * content = [text, image_url, image_url, image_url]
+     * </p>
+     */
+    public static void multimodalMultiImageChat() throws Exception {
+        AiHttpClient client = AiHttpClients.openAiCompatible(BASE_URL, API_KEY);
+
+        Path localJpeg = Paths.get("D:/temp/a.jpg");
+        Path localPng = Paths.get("D:/temp/b.png");
+        String remoteWebp = "https://example.com/c.webp";
+
+        AiHttpResponse response = client.chat(
+                AiHttpRequest.ofModel(VISION_MODEL)
+                        .userText("对比这些图片有什么区别")
+                        .userImageFile(localJpeg)
+                        .userImageFile(localPng, AiImageDetail.AUTO)
+                        .userImage(remoteWebp)
+                        .maxTokens(1024)
+        );
+        System.out.println(response.content());
+
+        AiHttpChatSession session = AiHttpClients.openAiCompatibleSession(BASE_URL, API_KEY, VISION_MODEL)
+                .system("你是一个图片对比助手");
+        AiHttpResponse next = session
+                .userText("请判断哪张图更适合做封面")
+                .userImageFile(localJpeg)
+                .userImageFile(localPng)
+                .chat();
+        System.out.println(next.content());
     }
 
     /**

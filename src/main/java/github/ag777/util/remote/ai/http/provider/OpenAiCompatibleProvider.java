@@ -28,6 +28,7 @@ import java.util.Map;
  * <p>该适配器支持：
  * <ul>
  * <li>标准聊天完成请求格式</li>
+ * <li>文本和多模态content parts消息</li>
  * <li>流式响应解析</li>
  * <li>工具调用支持</li>
  * <li>推理内容处理</li>
@@ -49,6 +50,7 @@ public class OpenAiCompatibleProvider implements AiHttpProvider {
     public Map<String, Object> buildRequestBody(AiHttpRequest request, boolean stream) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", request.model());
+        // AiMessage.content 可为 String 或 List<AiMessageContentPart>，由Gson按实际类型序列化。
         body.put("messages", request.messages());
         body.put("stream", stream);
         if (request.tools() != null && !request.tools().isEmpty()) {

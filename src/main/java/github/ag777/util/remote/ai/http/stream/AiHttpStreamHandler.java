@@ -42,6 +42,14 @@ public interface AiHttpStreamHandler {
     }
 
     /**
+     * 当开始接收推理内容时调用（在第一个推理增量之前）。
+     * 
+     * @param chunk 包含推理开始标记的分片对象
+     */
+    default void onStartReasoning(AiHttpChunk chunk) {
+    }
+
+    /**
      * 当收到推理内容增量时调用。
      * 
      * @param delta 推理内容的增量文本
@@ -51,12 +59,36 @@ public interface AiHttpStreamHandler {
     }
 
     /**
+     * 当推理内容接收完成时调用（在最后一个推理增量之后）。
+     * 
+     * @param chunk 包含推理结束标记的分片对象
+     */
+    default void onEndReasoning(AiHttpChunk chunk) {
+    }
+
+    /**
+     * 当开始接收对话内容时调用（在第一个内容增量之前）。
+     * 
+     * @param chunk 包含内容开始标记的分片对象
+     */
+    default void onStartContent(AiHttpChunk chunk) {
+    }
+
+    /**
      * 当收到对话内容增量时调用。
      * 
      * @param delta 对话内容的增量文本
      * @param chunk 包含该增量的完整分片对象
      */
     default void onContent(String delta, AiHttpChunk chunk) {
+    }
+
+    /**
+     * 当对话内容接收完成时调用（在最后一个内容增量之后）。
+     * 
+     * @param chunk 包含内容结束标记的分片对象
+     */
+    default void onEndContent(AiHttpChunk chunk) {
     }
 
     /**
