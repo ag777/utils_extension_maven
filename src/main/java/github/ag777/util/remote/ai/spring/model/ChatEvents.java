@@ -7,5 +7,7 @@ public enum ChatEvents {
     MESSAGE_START,
     MESSAGE,
     MESSAGE_END,
-    COMPLETE;
+    COMPLETE,
+    CANCELLED,
+    ERROR;
 }
